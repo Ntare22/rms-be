@@ -1,0 +1,2542 @@
+basePath: /
+definitions:
+  auth.AuthSessionResponse:
+    properties:
+      access_expires_at:
+        type: string
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      refresh_expires_at:
+        type: string
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      user:
+        $ref: '#/definitions/auth.UserSummary'
+    type: object
+  auth.LoginRequest:
+    properties:
+      email:
+        example: owner@acme.com
+        type: string
+      organization_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      organization_slug:
+        example: acme-prop
+        maxLength: 128
+        type: string
+      password:
+        example: securePass123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  auth.MeResponse:
+    properties:
+      claims_organization_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      claims_role:
+        example: admin
+        type: string
+      user:
+        $ref: '#/definitions/auth.UserSummary'
+    type: object
+  auth.RefreshRequest:
+    properties:
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+    required:
+    - refresh_token
+    type: object
+  auth.RefreshResponse:
+    properties:
+      access_expires_at:
+        type: string
+      access_token:
+        type: string
+      refresh_expires_at:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  auth.RegisterRequest:
+    properties:
+      email:
+        example: owner@acme.com
+        type: string
+      first_name:
+        example: Jordan
+        maxLength: 120
+        minLength: 1
+        type: string
+      last_name:
+        example: Lee
+        maxLength: 120
+        type: string
+      organization_name:
+        example: Acme Property Management
+        maxLength: 255
+        minLength: 2
+        type: string
+      organization_slug:
+        example: acme-prop
+        maxLength: 128
+        minLength: 2
+        type: string
+      password:
+        example: securePass123
+        maxLength: 72
+        minLength: 8
+        type: string
+      role:
+        enum:
+        - admin
+        - landlord
+        - manager
+        example: admin
+        type: string
+    required:
+    - email
+    - first_name
+    - organization_name
+    - organization_slug
+    - password
+    type: object
+  auth.UserSummary:
+    properties:
+      email:
+        example: owner@acme.com
+        type: string
+      first_name:
+        example: Jordan
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      last_name:
+        example: Lee
+        type: string
+      organization_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      role:
+        example: admin
+        type: string
+    type: object
+  buildings.BuildingListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/buildings.BuildingResponse'
+        type: array
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 5
+        type: integer
+    type: object
+  buildings.BuildingResponse:
+    properties:
+      address_line_1:
+        type: string
+      address_line_2:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440010
+        type: string
+      name:
+        example: Riverside Tower
+        type: string
+      organization_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      postal_code:
+        type: string
+      state:
+        type: string
+      status:
+        example: active
+        type: string
+      timezone:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  buildings.CreateBuildingRequest:
+    properties:
+      address_line_1:
+        example: 100 Main St
+        maxLength: 255
+        type: string
+      address_line_2:
+        example: Building A
+        maxLength: 255
+        type: string
+      city:
+        example: Austin
+        maxLength: 120
+        type: string
+      country:
+        example: US
+        type: string
+      name:
+        example: Riverside Tower
+        maxLength: 255
+        minLength: 1
+        type: string
+      postal_code:
+        example: "78701"
+        maxLength: 32
+        type: string
+      state:
+        example: TX
+        maxLength: 120
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        - archived
+        example: active
+        type: string
+      timezone:
+        example: America/Chicago
+        maxLength: 64
+        type: string
+    required:
+    - name
+    type: object
+  buildings.PatchBuildingRequest:
+    properties:
+      address_line_1:
+        maxLength: 255
+        type: string
+      address_line_2:
+        maxLength: 255
+        type: string
+      city:
+        maxLength: 120
+        type: string
+      country:
+        type: string
+      name:
+        example: Riverside Tower — East
+        maxLength: 255
+        minLength: 1
+        type: string
+      postal_code:
+        maxLength: 32
+        type: string
+      state:
+        maxLength: 120
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        - archived
+        example: inactive
+        type: string
+      timezone:
+        maxLength: 64
+        type: string
+    type: object
+  leases.CreateLeaseRequest:
+    properties:
+      currency:
+        example: USD
+        type: string
+      deposit_amount_minor:
+        minimum: 0
+        type: integer
+      end_date:
+        type: string
+      is_primary:
+        type: boolean
+      monthly_rent_amount_minor:
+        minimum: 0
+        type: integer
+      start_date:
+        type: string
+      status:
+        enum:
+        - draft
+        - active
+        - ended
+        - cancelled
+        example: draft
+        type: string
+      tenant_id:
+        type: string
+      unit_id:
+        type: string
+    required:
+    - monthly_rent_amount_minor
+    - start_date
+    - tenant_id
+    - unit_id
+    type: object
+  leases.EndLeaseRequest:
+    properties:
+      end_date:
+        type: string
+      note:
+        maxLength: 2000
+        type: string
+    type: object
+  leases.LeaseListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/leases.LeaseResponse'
+        type: array
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 50
+        type: integer
+    type: object
+  leases.LeaseResponse:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      currency:
+        example: USD
+        type: string
+      deposit_amount_minor:
+        type: integer
+      end_date:
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440050
+        type: string
+      is_primary:
+        example: true
+        type: boolean
+      monthly_rent_amount_minor:
+        example: 150000
+        type: integer
+      organization_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      start_date:
+        type: string
+      status:
+        example: active
+        type: string
+      tenant_id:
+        type: string
+      unit_id:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  leases.PatchLeaseRequest:
+    properties:
+      currency:
+        type: string
+      deposit_amount_minor:
+        minimum: 0
+        type: integer
+      end_date:
+        type: string
+      is_primary:
+        type: boolean
+      monthly_rent_amount_minor:
+        minimum: 0
+        type: integer
+      start_date:
+        type: string
+      status:
+        enum:
+        - draft
+        - active
+        - ended
+        - cancelled
+        type: string
+    type: object
+  organizations.CreateOrganizationRequest:
+    properties:
+      address_line1:
+        example: 1 Main St
+        maxLength: 255
+        type: string
+      address_line2:
+        example: Suite 200
+        maxLength: 255
+        type: string
+      billing_email:
+        example: billing@acme.com
+        maxLength: 320
+        type: string
+      city:
+        example: Austin
+        maxLength: 120
+        type: string
+      company_registration:
+        example: DE-12345
+        maxLength: 128
+        type: string
+      country:
+        example: US
+        type: string
+      default_currency:
+        example: USD
+        type: string
+      legal_name:
+        example: Acme Property Management LLC
+        maxLength: 255
+        type: string
+      name:
+        example: Acme Property Management
+        maxLength: 255
+        minLength: 2
+        type: string
+      phone:
+        example: +1-555-0100
+        maxLength: 64
+        type: string
+      postal_code:
+        example: "78701"
+        maxLength: 32
+        type: string
+      region:
+        example: TX
+        maxLength: 120
+        type: string
+      slug:
+        example: acme-prop
+        maxLength: 128
+        minLength: 2
+        type: string
+      tax_id:
+        example: 12-3456789
+        maxLength: 64
+        type: string
+      timezone:
+        example: America/Chicago
+        maxLength: 64
+        type: string
+      website:
+        example: https://acme.com
+        maxLength: 512
+        type: string
+    required:
+    - name
+    - slug
+    type: object
+  organizations.OrganizationResponse:
+    properties:
+      address_line1:
+        type: string
+      address_line2:
+        type: string
+      billing_email:
+        type: string
+      city:
+        type: string
+      company_registration:
+        type: string
+      country:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      default_currency:
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      legal_name:
+        type: string
+      name:
+        example: Acme Property Management
+        type: string
+      phone:
+        type: string
+      postal_code:
+        type: string
+      region:
+        type: string
+      slug:
+        example: acme-prop
+        type: string
+      tax_id:
+        type: string
+      timezone:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      website:
+        type: string
+    type: object
+  organizations.PatchOrganizationRequest:
+    properties:
+      address_line1:
+        maxLength: 255
+        type: string
+      address_line2:
+        maxLength: 255
+        type: string
+      billing_email:
+        maxLength: 320
+        type: string
+      city:
+        maxLength: 120
+        type: string
+      company_registration:
+        maxLength: 128
+        type: string
+      country:
+        type: string
+      default_currency:
+        type: string
+      legal_name:
+        maxLength: 255
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      phone:
+        maxLength: 64
+        type: string
+      postal_code:
+        maxLength: 32
+        type: string
+      region:
+        maxLength: 120
+        type: string
+      tax_id:
+        maxLength: 64
+        type: string
+      timezone:
+        maxLength: 64
+        type: string
+      website:
+        maxLength: 512
+        type: string
+    type: object
+  response.Envelope-auth_AuthSessionResponse:
+    properties:
+      data:
+        $ref: '#/definitions/auth.AuthSessionResponse'
+    type: object
+  response.Envelope-auth_MeResponse:
+    properties:
+      data:
+        $ref: '#/definitions/auth.MeResponse'
+    type: object
+  response.Envelope-auth_RefreshResponse:
+    properties:
+      data:
+        $ref: '#/definitions/auth.RefreshResponse'
+    type: object
+  response.Envelope-buildings_BuildingListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/buildings.BuildingListResponse'
+    type: object
+  response.Envelope-buildings_BuildingResponse:
+    properties:
+      data:
+        $ref: '#/definitions/buildings.BuildingResponse'
+    type: object
+  response.Envelope-leases_LeaseListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/leases.LeaseListResponse'
+    type: object
+  response.Envelope-leases_LeaseResponse:
+    properties:
+      data:
+        $ref: '#/definitions/leases.LeaseResponse'
+    type: object
+  response.Envelope-organizations_OrganizationResponse:
+    properties:
+      data:
+        $ref: '#/definitions/organizations.OrganizationResponse'
+    type: object
+  response.Envelope-tenants_TenantListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/tenants.TenantListResponse'
+    type: object
+  response.Envelope-tenants_TenantResponse:
+    properties:
+      data:
+        $ref: '#/definitions/tenants.TenantResponse'
+    type: object
+  response.Envelope-units_UnitListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/units.UnitListResponse'
+    type: object
+  response.Envelope-units_UnitResponse:
+    properties:
+      data:
+        $ref: '#/definitions/units.UnitResponse'
+    type: object
+  response.Envelope-users_UserListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/users.UserListResponse'
+    type: object
+  response.Envelope-users_UserResponse:
+    properties:
+      data:
+        $ref: '#/definitions/users.UserResponse'
+    type: object
+  response.ErrorBody:
+    properties:
+      error:
+        $ref: '#/definitions/response.ErrorDetail'
+    type: object
+  response.ErrorDetail:
+    properties:
+      code:
+        type: string
+      kind:
+        type: string
+      message:
+        type: string
+    type: object
+  tenants.CreateTenantRequest:
+    properties:
+      email:
+        example: jordan.lee@example.com
+        maxLength: 320
+        type: string
+      email_opt_in:
+        example: true
+        type: boolean
+      first_name:
+        example: Jordan
+        maxLength: 120
+        minLength: 1
+        type: string
+      full_name:
+        example: Jordan Lee
+        maxLength: 512
+        type: string
+      last_name:
+        example: Lee
+        maxLength: 120
+        type: string
+      locale:
+        example: en-US
+        maxLength: 32
+        type: string
+      phone:
+        example: +1-555-0100
+        maxLength: 32
+        type: string
+      sms_opt_in:
+        example: false
+        type: boolean
+      sms_verified:
+        example: false
+        type: boolean
+      status:
+        enum:
+        - active
+        - inactive
+        - archived
+        example: active
+        type: string
+      timezone:
+        example: America/Chicago
+        maxLength: 64
+        type: string
+    required:
+    - first_name
+    type: object
+  tenants.CurrentUnitSummary:
+    properties:
+      unit_id:
+        example: 550e8400-e29b-41d4-a716-446655440011
+        type: string
+      unit_label:
+        example: 12B
+        type: string
+    type: object
+  tenants.PatchTenantRequest:
+    properties:
+      email:
+        maxLength: 320
+        type: string
+      email_opt_in:
+        type: boolean
+      first_name:
+        maxLength: 120
+        minLength: 1
+        type: string
+      full_name:
+        maxLength: 512
+        type: string
+      last_name:
+        maxLength: 120
+        type: string
+      locale:
+        maxLength: 32
+        type: string
+      phone:
+        maxLength: 32
+        type: string
+      sms_opt_in:
+        type: boolean
+      sms_verified:
+        type: boolean
+      status:
+        enum:
+        - active
+        - inactive
+        - archived
+        type: string
+      timezone:
+        maxLength: 64
+        type: string
+    type: object
+  tenants.TenantListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/tenants.TenantResponse'
+        type: array
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 100
+        type: integer
+    type: object
+  tenants.TenantResponse:
+    properties:
+      active_lease_count:
+        example: 1
+        type: integer
+      created_at:
+        type: string
+      created_by:
+        type: string
+      current_unit:
+        $ref: '#/definitions/tenants.CurrentUnitSummary'
+      email:
+        example: jordan.lee@example.com
+        type: string
+      email_opt_in:
+        type: boolean
+      first_name:
+        example: Jordan
+        type: string
+      full_name:
+        example: Jordan Lee
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440040
+        type: string
+      last_name:
+        example: Lee
+        type: string
+      locale:
+        example: en-US
+        type: string
+      organization_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      phone:
+        example: "+15550100"
+        type: string
+      sms_opt_in:
+        type: boolean
+      sms_verified:
+        type: boolean
+      status:
+        example: active
+        type: string
+      timezone:
+        example: America/Chicago
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  units.CreateUnitRequest:
+    properties:
+      bedrooms:
+        example: 2
+        maximum: 32
+        minimum: 0
+        type: integer
+      currency:
+        example: USD
+        type: string
+      default_rent_amount_minor:
+        example: 185000
+        minimum: 0
+        type: integer
+      status:
+        enum:
+        - vacant
+        - occupied
+        - offline
+        - maintenance
+        example: vacant
+        type: string
+      unit_label:
+        example: 101-A
+        maxLength: 64
+        minLength: 1
+        type: string
+    required:
+    - unit_label
+    type: object
+  units.OccupancySummary:
+    properties:
+      active_lease_id:
+        example: 550e8400-e29b-41d4-a716-446655440020
+        type: string
+      has_active_lease:
+        example: true
+        type: boolean
+      tenant_id:
+        example: 550e8400-e29b-41d4-a716-446655440030
+        type: string
+    type: object
+  units.PatchUnitRequest:
+    properties:
+      bedrooms:
+        maximum: 32
+        minimum: 0
+        type: integer
+      currency:
+        type: string
+      default_rent_amount_minor:
+        minimum: 0
+        type: integer
+      status:
+        enum:
+        - vacant
+        - occupied
+        - offline
+        - maintenance
+        type: string
+      unit_label:
+        example: 101-B
+        maxLength: 64
+        minLength: 1
+        type: string
+    type: object
+  units.UnitListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/units.UnitResponse'
+        type: array
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 12
+        type: integer
+    type: object
+  units.UnitResponse:
+    properties:
+      bedrooms:
+        example: 2
+        type: integer
+      building_id:
+        example: 550e8400-e29b-41d4-a716-446655440010
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      currency:
+        example: USD
+        type: string
+      default_rent_amount_minor:
+        example: 185000
+        type: integer
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440011
+        type: string
+      occupancy:
+        $ref: '#/definitions/units.OccupancySummary'
+      organization_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      status:
+        example: vacant
+        type: string
+      unit_label:
+        example: 101-A
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  users.CreateUserRequest:
+    properties:
+      email:
+        example: alex@acme.com
+        maxLength: 320
+        type: string
+      first_name:
+        example: Alex
+        maxLength: 120
+        minLength: 1
+        type: string
+      last_name:
+        example: Rivera
+        maxLength: 120
+        type: string
+      password:
+        example: SecurePass123
+        maxLength: 72
+        minLength: 8
+        type: string
+      phone:
+        example: +1-555-0199
+        maxLength: 64
+        type: string
+      role:
+        enum:
+        - admin
+        - landlord
+        - manager
+        - staff
+        example: staff
+        type: string
+      status:
+        enum:
+        - active
+        - disabled
+        - invited
+        example: active
+        type: string
+    required:
+    - email
+    - first_name
+    - role
+    type: object
+  users.PatchUserRequest:
+    properties:
+      email:
+        example: alex.new@acme.com
+        maxLength: 320
+        type: string
+      first_name:
+        example: Alex
+        maxLength: 120
+        minLength: 1
+        type: string
+      last_name:
+        example: Rivera
+        maxLength: 120
+        type: string
+      password:
+        example: NewSecurePass456
+        maxLength: 72
+        minLength: 8
+        type: string
+      phone:
+        example: +1-555-0199
+        maxLength: 64
+        type: string
+      role:
+        enum:
+        - admin
+        - landlord
+        - manager
+        - staff
+        example: manager
+        type: string
+      status:
+        enum:
+        - active
+        - disabled
+        - invited
+        example: disabled
+        type: string
+    type: object
+  users.UserListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/users.UserResponse'
+        type: array
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 42
+        type: integer
+    type: object
+  users.UserResponse:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      email:
+        example: alex@acme.com
+        type: string
+      first_name:
+        example: Alex
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      last_name:
+        example: Rivera
+        type: string
+      organization_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      phone:
+        example: +1-555-0199
+        type: string
+      role:
+        example: staff
+        type: string
+      status:
+        example: active
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Rent Management System HTTP API (bootstrap; module routes are placeholders).
+  title: RMS API
+  version: "1.0"
+paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates with email and password within an organization (by
+        id or slug).
+      parameters:
+      - description: Login payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Example: tokens plus user summary'
+          schema:
+            $ref: '#/definitions/response.Envelope-auth_AuthSessionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      summary: Login
+      tags:
+      - auth
+  /api/v1/auth/me:
+    get:
+      description: Returns the authenticated user profile and claim context.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-auth_MeResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Current user
+      tags:
+      - auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchanges a refresh token for a new access and refresh token pair
+        (rotation).
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-auth_RefreshResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      summary: Refresh tokens
+      tags:
+      - auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates an organization and bootstrap user (intended for controlled
+        use in production).
+      parameters:
+      - description: Registration payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope-auth_AuthSessionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      summary: Register organization and first user
+      tags:
+      - auth
+  /api/v1/organizations:
+    post:
+      consumes:
+      - application/json
+      description: '**Admin only.** Creates a new landlord / property-management company
+        (tenant). Sets `created_by` / `updated_by` from the access token subject.'
+      parameters:
+      - description: Organization payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizations.CreateOrganizationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope-organizations_OrganizationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Non-admin callers are rejected
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Create organization
+      tags:
+      - organizations
+  /api/v1/organizations/{id}:
+    get:
+      description: '**Admin:** any organization id. **Landlord, manager, staff:**
+        only their own `organization_id` from the token; cross-tenant access returns
+        403.'
+      parameters:
+      - description: Organization ID
+        example: 550e8400-e29b-41d4-a716-446655440000
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-organizations_OrganizationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Get organization
+      tags:
+      - organizations
+    patch:
+      consumes:
+      - application/json
+      description: '**Admin:** may update any organization. **Landlord and manager:**
+        may update only their own organization. **Staff** cannot use this endpoint.
+        Slug is immutable. Sets `updated_by` from the token subject.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update (omit to leave unchanged)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/organizations.PatchOrganizationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-organizations_OrganizationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Update organization profile
+      tags:
+      - organizations
+  /api/v1/organizations/{id}/buildings:
+    get:
+      description: '**Admin:** any organization `id`. **Landlord, manager, staff:**
+        only buildings in their own organization. Paginated via `page` and `page_size`
+        (max 100). Optional `status` filter: `active`, `inactive`, or `archived`.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page (1-based)
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        example: 20
+        in: query
+        maximum: 100
+        name: page_size
+        type: integer
+      - description: 'Filter: active, inactive, or archived'
+        example: active
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-buildings_BuildingListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: List buildings
+      tags:
+      - buildings
+    post:
+      consumes:
+      - application/json
+      description: '**Admin:** create in any organization. **Landlord / manager:**
+        create only in their own organization. **Staff** cannot create. Sets audit
+        `created_by` / `updated_by` from the token subject.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'Example: {\'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/buildings.CreateBuildingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope-buildings_BuildingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Create building
+      tags:
+      - buildings
+  /api/v1/organizations/{id}/buildings/{buildingId}:
+    delete:
+      description: '**Admin:** delete in any org. **Landlord / manager:** only in
+        their org. **Staff** cannot delete. Soft-deletes the building. **Conflict**
+        if any units still reference the building (no force-delete flag).'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Building ID
+        format: uuid
+        in: path
+        name: buildingId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "409":
+          description: building_has_units
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Delete building
+      tags:
+      - buildings
+    get:
+      description: '**Admin:** any org. **Landlord, manager, staff:** building must
+        belong to their organization (enforced by path `id` vs token). Returns 404
+        if the building is not in the organization.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Building ID
+        format: uuid
+        in: path
+        name: buildingId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-buildings_BuildingResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Get building
+      tags:
+      - buildings
+    patch:
+      consumes:
+      - application/json
+      description: '**Admin:** update any org’s building. **Landlord / manager:**
+        only buildings in their org. **Staff** cannot update. Example body: `{\"status\":\"inactive\",\"address_line_1\":\"200
+        Oak Ave\"}`.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Building ID
+        format: uuid
+        in: path
+        name: buildingId
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/buildings.PatchBuildingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-buildings_BuildingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Update building
+      tags:
+      - buildings
+  /api/v1/organizations/{id}/buildings/{buildingId}/units:
+    get:
+      description: '**Nested route:** `organizations` → `buildings` → `units`. **Admin:**
+        any organization `id`. **Landlord, manager, staff:** only resources in their
+        token organization. Paginated (`page`, `page_size`, max 100). Optional `status`
+        filter (`vacant`, `occupied`, `offline`, `maintenance`). Set `include_occupancy=true`
+        to add a derived `occupancy` object per unit (active lease summary when present).'
+      parameters:
+      - description: Organization ID (same wildcard as other org routes)
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Building ID (must belong to organization)
+        format: uuid
+        in: path
+        name: buildingId
+        required: true
+        type: string
+      - default: 1
+        description: Page (1-based)
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        example: 20
+        in: query
+        maximum: 100
+        name: page_size
+        type: integer
+      - description: Filter by unit status
+        example: vacant
+        in: query
+        name: status
+        type: string
+      - description: Set to true/1/yes to include occupancy summary per unit
+        example: "true"
+        in: query
+        name: include_occupancy
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Example items include unit_label, currency, default_rent_amount_minor;
+            occupancy when requested
+          schema:
+            $ref: '#/definitions/response.Envelope-units_UnitListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: List units in a building
+      tags:
+      - units
+    post:
+      consumes:
+      - application/json
+      description: '**Admin / landlord / manager:** create a unit under the given
+        building. **Staff** cannot create. `unit_label` must be unique per building.
+        Defaults: `currency` USD, `status` vacant.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Building ID
+        format: uuid
+        in: path
+        name: buildingId
+        required: true
+        type: string
+      - description: 'Example: {\'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/units.CreateUnitRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope-units_UnitResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Create unit
+      tags:
+      - units
+  /api/v1/organizations/{id}/buildings/{buildingId}/units/{unitId}:
+    delete:
+      description: Soft-deletes the unit. **409** if a lease with status `active`
+        exists for this unit (no force-delete). **Admin / landlord / manager** only.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Building ID
+        format: uuid
+        in: path
+        name: buildingId
+        required: true
+        type: string
+      - description: Unit ID
+        format: uuid
+        in: path
+        name: unitId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "409":
+          description: unit_has_active_lease
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Delete unit
+      tags:
+      - units
+    get:
+      description: Returns a single unit scoped to organization and building. Optional
+        `include_occupancy=true` adds lease-derived occupancy.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Building ID
+        format: uuid
+        in: path
+        name: buildingId
+        required: true
+        type: string
+      - description: Unit ID
+        format: uuid
+        in: path
+        name: unitId
+        required: true
+        type: string
+      - description: true/1/yes for occupancy block
+        example: "true"
+        in: query
+        name: include_occupancy
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Example: unit with currency USD and optional occupancy.has_active_lease'
+          schema:
+            $ref: '#/definitions/response.Envelope-units_UnitResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Get unit
+      tags:
+      - units
+    patch:
+      consumes:
+      - application/json
+      description: '**Admin / landlord / manager** may update. **Staff** may not.
+        Example: `{\"status\":\"maintenance\",\"default_rent_amount_minor\":190000}`.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Building ID
+        format: uuid
+        in: path
+        name: buildingId
+        required: true
+        type: string
+      - description: Unit ID
+        format: uuid
+        in: path
+        name: unitId
+        required: true
+        type: string
+      - description: Partial update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/units.PatchUnitRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-units_UnitResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Update unit
+      tags:
+      - units
+  /api/v1/organizations/{id}/leases:
+    get:
+      description: Organization-scoped list with **pagination** (`page`, `page_size`,
+        max 100). **Filters:** `status`, `building_id` (via unit), `unit_id`, `tenant_id`,
+        `active_on` (date `YYYY-MM-DD` — leases **active** for any time on that UTC
+        calendar day). **Overlap rule:** creating/updating an **active + primary**
+        lease is rejected if its `[start_date,end_date)` range intersects another
+        active primary lease on the same unit (mirrors DB EXCLUDE constraint).
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page (1-based)
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        example: 20
+        in: query
+        maximum: 100
+        name: page_size
+        type: integer
+      - description: draft | active | ended | cancelled
+        example: active
+        in: query
+        name: status
+        type: string
+      - description: Filter by building (units in this building)
+        format: uuid
+        in: query
+        name: building_id
+        type: string
+      - description: Filter by unit
+        format: uuid
+        in: query
+        name: unit_id
+        type: string
+      - description: Filter by tenant
+        format: uuid
+        in: query
+        name: tenant_id
+        type: string
+      - description: Date YYYY-MM-DD (UTC day) when lease must be active
+        example: "2026-04-18"
+        in: query
+        name: active_on
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-leases_LeaseListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: List leases
+      tags:
+      - leases
+    post:
+      consumes:
+      - application/json
+      description: '**Draft** is allowed. **Active + primary** leases cannot overlap
+        in time on the same unit (enforced here and by SQL EXCLUDE). Tenant and unit
+        must belong to the organization. When `status` is **active**, the unit becomes
+        **occupied** if at least one active lease exists. **Audit:** `lease.created`
+        is recorded.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'Example: {\'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/leases.CreateLeaseRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope-leases_LeaseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "409":
+          description: lease_overlap
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Create lease
+      tags:
+      - leases
+  /api/v1/organizations/{id}/leases/{leaseId}:
+    get:
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lease ID
+        format: uuid
+        in: path
+        name: leaseId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-leases_LeaseResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Get lease
+      tags:
+      - leases
+    patch:
+      consumes:
+      - application/json
+      description: State transitions (e.g. **draft → active**) run overlap checks
+        for **active + primary** leases on the same unit. Changing dates on an active
+        primary lease also re-validates overlap. Unit occupancy is recalculated after
+        save. **Audit:** `lease.updated`.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lease ID
+        format: uuid
+        in: path
+        name: leaseId
+        required: true
+        type: string
+      - description: 'Example: {\'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/leases.PatchLeaseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-leases_LeaseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "409":
+          description: lease_overlap
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Update lease
+      tags:
+      - leases
+  /api/v1/organizations/{id}/leases/{leaseId}/end:
+    post:
+      consumes:
+      - application/json
+      description: 'Sets `status` to **ended** and `end_date` (request body or server
+        time). Recalculates unit occupancy: when **no** active leases remain on the
+        unit, status becomes **vacant**. Prefer this over deleting tenants with history.
+        **Audit:** `lease.ended`.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lease ID
+        format: uuid
+        in: path
+        name: leaseId
+        required: true
+        type: string
+      - description: Optional end_date (RFC3339); defaults to now
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/leases.EndLeaseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-leases_LeaseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: End lease
+      tags:
+      - leases
+  /api/v1/organizations/{id}/tenants:
+    get:
+      description: '**Nested route:** `/api/v1/organizations/{id}/tenants`. **Admin:**
+        any org `id`. **Landlord, manager, staff:** own organization only. **Pagination:**
+        `page`, `page_size` (max 100). **Search (AND):** optional `name`, `email`,
+        `phone` query params — each matches case-insensitively (`ILIKE`) against name
+        fields or email/phone respectively. Optional `status` filter (`active`, `inactive`,
+        `archived`). Set `include_summary=true` to add `active_lease_count` and `current_unit`
+        (from the latest active lease) per tenant.'
+      parameters:
+      - description: Organization ID (Gin param name `id`)
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page (1-based)
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        example: 20
+        in: query
+        maximum: 100
+        name: page_size
+        type: integer
+      - description: Search by first/last/full name (partial)
+        example: Jordan
+        in: query
+        name: name
+        type: string
+      - description: Search by email (partial)
+        example: lee@
+        in: query
+        name: email
+        type: string
+      - description: Search by phone (partial)
+        example: "555"
+        in: query
+        name: phone
+        type: string
+      - description: Filter by tenant status
+        example: active
+        in: query
+        name: status
+        type: string
+      - description: true/1/yes to include lease summary fields
+        example: "true"
+        in: query
+        name: include_summary
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Example item: full_name, email_opt_in, active_lease_count
+            when include_summary=true'
+          schema:
+            $ref: '#/definitions/response.Envelope-tenants_TenantListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: List tenants
+      tags:
+      - tenants
+    post:
+      consumes:
+      - application/json
+      description: '**Admin / landlord / manager** only. Validates `email` format
+        when provided; `phone` max length 32. If `full_name` is omitted it is derived
+        from first + last name. Default `status` is `active`.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'Example: {\'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/tenants.CreateTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope-tenants_TenantResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Create tenant
+      tags:
+      - tenants
+  /api/v1/organizations/{id}/tenants/{tenantId}:
+    delete:
+      description: '**Soft-delete** only when the tenant has **no** lease rows (any
+        status). If leases exist, returns **409** `tenant_has_leases` — keep the record
+        and **PATCH** `status` to `inactive` or `archived` instead. **Admin / landlord
+        / manager** only.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tenant ID
+        format: uuid
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "409":
+          description: tenant_has_leases
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Delete tenant
+      tags:
+      - tenants
+    get:
+      description: Returns a tenant scoped to the organization. Optional `include_summary=true`
+        adds `active_lease_count` and `current_unit` from active leases.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tenant ID
+        format: uuid
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      - description: true/1/yes for lease summary
+        example: "true"
+        in: query
+        name: include_summary
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-tenants_TenantResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Get tenant
+      tags:
+      - tenants
+    patch:
+      consumes:
+      - application/json
+      description: '**Preferred lifecycle:** set `status` to `inactive` or `archived`
+        instead of deleting when the tenant has lease history. Partial updates supported.
+        Recomputes `full_name` when `first_name` or `last_name` changes unless `full_name`
+        is sent explicitly.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tenant ID
+        format: uuid
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      - description: 'Example: {\'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/tenants.PatchTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-tenants_TenantResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Update tenant
+      tags:
+      - tenants
+  /api/v1/organizations/{id}/users:
+    get:
+      description: '**Admin:** any organization `id`. **Landlord / manager:** only
+        users in their own organization (`id` must match the token). **Staff** is
+        not allowed. Paginated with `page` and `page_size` (max 100).'
+      parameters:
+      - description: Organization ID
+        example: 550e8400-e29b-41d4-a716-446655440000
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number (1-based)
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        example: 20
+        in: query
+        maximum: 100
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-users_UserListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: List organization users
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: '**Admin:** may create users in any organization with any role.
+        **Landlord:** may create `manager` or `staff` in their org. **Manager:** may
+        create `staff` only. Password is required unless `status` is `invited` (server
+        generates a temporary password). Email must be unique per organization.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Create payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/users.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope-users_UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Create organization user
+      tags:
+      - users
+  /api/v1/organizations/{id}/users/{userId}:
+    patch:
+      consumes:
+      - application/json
+      description: '**Admin:** may update any user in any org. **Landlord:** may update
+        `manager` and `staff` users in their org (not other landlords or admins).
+        **Manager:** may update `staff` only. Optional password is re-hashed when
+        provided.'
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User ID
+        format: uuid
+        in: path
+        name: userId
+        required: true
+        type: string
+      - description: 'Example: {\'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/users.PatchUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-users_UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Update organization user
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

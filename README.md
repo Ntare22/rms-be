@@ -1,53 +1,61 @@
-# Project rms-be
+# RMS Backend (bootstrap)
 
-One Paragraph of project description goes here
+HTTP API bootstrap for a **Rent Management System**: **Gin**, **GORM + PostgreSQL** (`DATABASE_URL`), structured logging, shared `internal/api` helpers, **Swagger** (swaggo), and **health** endpoints. Domain modules are **not** implemented yet—only **route group placeholders** under `/api/v1`.
 
-## Getting Started
+## Configuration
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+Environment variables are loaded in `internal/config/config.go` (see `.env.example`). Required for the API:
 
-## MakeFile
+- `DATABASE_URL`
+- `JWT_SECRET`, `JWT_REFRESH_SECRET`
 
-Run build make command with tests
+## Run locally
+
 ```bash
-make all
-```
-
-Build the application
-```bash
-make build
-```
-
-Run the application
-```bash
+cp .env.example .env
+make docker-up
 make run
 ```
-Create DB container
-```bash
-make docker-run
-```
 
-Shutdown DB Container
-```bash
-make docker-down
-```
+- **Swagger UI**: `http://localhost:8080/swagger/index.html`
+- **Liveness**: `GET /health/live` — returns `503` with `shutting_down` once graceful shutdown starts.
+- **Readiness**: `GET /health/ready` — PostgreSQL ping.
+- **Internal** (optional): if `INTERNAL_JOB_SECRET` is set, `GET /internal/status` with header `X-Internal-Key: <secret>`.
 
-DB Integrations Test:
-```bash
-make itest
-```
+On API startup, **`internal/app.AutoMigrate`** runs via **`NewDependencies`**, syncing GORM models to Postgres (development-friendly). Production should still apply **versioned SQL migrations** for constraints GORM does not create (EXCLUDE overlaps, allocation totals, triggers).
 
-Live reload the application:
-```bash
-make watch
-```
+## Make targets
 
-Run the test suite:
-```bash
-make test
-```
+| Target | Description |
+|--------|-------------|
+| `make build` | Build `bin/rms-api` and `bin/rms-worker` |
+| `make run` | Run API |
+| `make run-worker` | Run worker (config load only for now) |
+| `make test` | `go test -short ./...` |
+| `make itest` | Postgres integration test (Docker) |
+| `make swagger` | Regenerate `docs/` |
 
-Clean up binary from the last build:
-```bash
-make clean
-```
+## Layout
+
+- `internal/config` — env-based configuration.
+- `internal/database/postgres.go` — connection pool + ping/health.
+- `internal/api/*` — errors, response envelope, pagination, validator (go-playground), security (HS256 JWT + password placeholder), logger abstraction, clock, uuid.
+- `internal/middleware` — request ID (Gin + `context.Context`), structured logging, panic recovery, JWT auth + RBAC roles, org scoping, auth rate limit, internal job secret.
+- `internal/app` — router, dependencies, server, **`migrate.go`** (`AutoMigrate` all module models); module route placeholders in `module_routes.go`.
+
+### Middleware quick reference
+
+| Middleware | Purpose |
+|------------|---------|
+| `RequestID` | `X-Request-ID` on response; Gin context + `Request.Context()` |
+| `StructuredLogger` | method, path, status, `duration_ms`, request ID |
+| `Recovery` | panic → `response.Error(ErrInternal)` |
+| `JWTAuth` | Bearer access JWT → `UserClaims` in context |
+| `RequireRoles` | allow-list `admin` / `landlord` / `manager` |
+| `RequireOrganizationParam` | non-admins must match `:org_id` or `X-Organization-ID` to JWT `org_id` |
+| `AuthLoginRateLimiter` | per-IP limit on `/api/v1/auth/login` and `/register` (`RATE_LIMIT_AUTH_RPM`) |
+| `InternalSecretAuth` | `X-Internal-Key` must equal `INTERNAL_JOB_SECRET` |
+
+## Go version
+
+Match the `go` directive in `go.mod` when installing the toolchain.

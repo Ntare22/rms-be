@@ -1,15 +1,20 @@
 services:
-  psql_bp:
-    image: postgres:latest
+  postgres:
+    image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${BLUEPRINT_DB_DATABASE}
-      POSTGRES_USER: ${BLUEPRINT_DB_USERNAME}
-      POSTGRES_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-rms}
+      POSTGRES_USER: ${POSTGRES_USER:-rms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rms}
     ports:
-      - "${BLUEPRINT_DB_PORT}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - psql_volume_bp:/var/lib/postgresql/data
+      - rms_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
-  psql_volume_bp:
+  rms_pg_data:

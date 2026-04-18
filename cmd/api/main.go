@@ -1,58 +1,79 @@
+// @title RMS API
+// @version 1.0
+// @description Rent Management System HTTP API (bootstrap; module routes are placeholders).
+// @host localhost:8080
+// @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log"
 	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"rms-be/internal/server"
+	"github.com/joho/godotenv"
+
+	"rms-be/internal/api/clock"
+	applogger "rms-be/internal/api/logger"
+	"rms-be/internal/app"
+	"rms-be/internal/config"
+	"rms-be/internal/database"
 )
 
-func gracefulShutdown(apiServer *http.Server, done chan bool) {
-	// Create context that listens for the interrupt signal from the OS.
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
-	// Listen for the interrupt signal.
-	<-ctx.Done()
-
-	log.Println("shutting down gracefully, press Ctrl+C again to force")
-	stop() // Allow Ctrl+C to force shutdown
-
-	// The context is used to inform the server it has 5 seconds to finish
-	// the request it is currently handling
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := apiServer.Shutdown(ctx); err != nil {
-		log.Printf("Server forced to shutdown with error: %v", err)
-	}
-
-	log.Println("Server exiting")
-
-	// Notify the main goroutine that the shutdown is complete
-	done <- true
-}
-
 func main() {
+	_ = godotenv.Load()
 
-	server := server.NewServer()
-
-	// Create a done channel to signal when the shutdown is complete
-	done := make(chan bool, 1)
-
-	// Run graceful shutdown in a separate goroutine
-	go gracefulShutdown(server, done)
-
-	err := server.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		panic(fmt.Sprintf("http server error: %s", err))
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("config: %v", err)
 	}
 
-	// Wait for the graceful shutdown to complete
+	logr := applogger.NewSlog(cfg.AppEnv, cfg.LogLevel)
+
+	clk := clock.RealClock{}
+	db, err := database.OpenPostgres(cfg.DatabaseURL, clk)
+	if err != nil {
+		log.Fatalf("database: %v", err)
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			logr.Error("database close", "error", err)
+		}
+	}()
+
+	deps, err := app.NewDependencies(cfg, logr, db, clk)
+	if err != nil {
+		log.Fatalf("dependencies: %v", err)
+	}
+	srv := app.NewServer(deps)
+
+	done := make(chan struct{}, 1)
+	go func() {
+		ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+		defer stop()
+		<-ctx.Done()
+		logr.Info("shutdown signal received")
+		deps.MarkShuttingDown()
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			logr.Error("http shutdown", "error", err)
+		}
+		close(done)
+	}()
+
+	logr.Info("http listening", "port", cfg.Port)
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("http: %v", err)
+	}
+
 	<-done
-	log.Println("Graceful shutdown complete.")
+	logr.Info("shutdown complete")
 }

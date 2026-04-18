@@ -1,64 +1,51 @@
-# Simple Makefile for a Go project
+.PHONY: all build run run-worker test itest swagger clean docker-up docker-down
 
-# Build the application
 all: build test
 
-build:
-	@echo "Building..."
-	
-	
-	@go build -o main cmd/api/main.go
+BIN_DIR := bin
 
-# Run the application
+build:
+	@echo "Building API and worker..."
+	@mkdir -p $(BIN_DIR)
+	@go build -o $(BIN_DIR)/rms-api ./cmd/api
+	@go build -o $(BIN_DIR)/rms-worker ./cmd/worker
+
 run:
-	@go run cmd/api/main.go
-# Create DB container
-docker-run:
-	@if docker compose up --build 2>/dev/null; then \
+	@go run ./cmd/api
+
+run-worker:
+	@go run ./cmd/worker
+
+test:
+	@go test ./... -short -count=1
+
+itest:
+	@go test ./internal/database -count=1
+
+swagger:
+	@go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g main.go -d ./cmd/api,./internal/app,./internal/modules/auth,./internal/modules/organizations,./internal/modules/users,./internal/modules/buildings,./internal/modules/units,./internal/modules/tenants,./internal/modules/leases -o ./docs --parseDependency --parseInternal
+
+clean:
+	@rm -rf $(BIN_DIR) main
+
+docker-up:
+	@if docker compose up -d 2>/dev/null; then \
 		: ; \
 	else \
-		echo "Falling back to Docker Compose V1"; \
-		docker-compose up --build; \
+		docker-compose up -d; \
 	fi
 
-# Shutdown DB container
 docker-down:
 	@if docker compose down 2>/dev/null; then \
 		: ; \
 	else \
-		echo "Falling back to Docker Compose V1"; \
 		docker-compose down; \
 	fi
 
-# Test the application
-test:
-	@echo "Testing..."
-	@go test ./... -v
-# Integrations Tests for the application
-itest:
-	@echo "Running integration tests..."
-	@go test ./internal/database -v
-
-# Clean the binary
-clean:
-	@echo "Cleaning..."
-	@rm -f main
-
-# Live Reload
 watch:
 	@if command -v air > /dev/null; then \
-            air; \
-            echo "Watching...";\
-        else \
-            read -p "Go's 'air' is not installed on your machine. Do you want to install it? [Y/n] " choice; \
-            if [ "$$choice" != "n" ] && [ "$$choice" != "N" ]; then \
-                go install github.com/air-verse/air@latest; \
-                air; \
-                echo "Watching...";\
-            else \
-                echo "You chose not to install air. Exiting..."; \
-                exit 1; \
-            fi; \
-        fi
-
-.PHONY: all build run test clean watch docker-run docker-down itest
+		air; \
+	else \
+		echo "Install air: go install github.com/air-verse/air@latest"; \
+		exit 1; \
+	fi

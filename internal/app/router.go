@@ -33,12 +33,12 @@ func NewRouter(deps *Dependencies) *gin.Engine {
 	r.Use(middleware.RequestID())
 	r.Use(middleware.StructuredLogger(deps.Log))
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://127.0.0.1:5173"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", middleware.HeaderRequestID, middleware.HeaderOrganizationID, middleware.HeaderInternalKey},
-		ExposeHeaders:    []string{middleware.HeaderRequestID},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
+		AllowOrigins:     deps.Config.CORSAllowedOrigins,
+		AllowMethods:     deps.Config.CORSAllowedMethods,
+		AllowHeaders:     deps.Config.CORSAllowedHeaders,
+		ExposeHeaders:    deps.Config.CORSExposeHeaders,
+		AllowCredentials: deps.Config.CORSAllowCredentials,
+		MaxAge:           deps.Config.CORSMaxAge,
 	}))
 
 	//	@Summary		Liveness

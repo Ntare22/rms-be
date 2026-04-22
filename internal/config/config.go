@@ -15,6 +15,12 @@ type Config struct {
 
 	DatabaseURL string
 	AppBaseURL  string
+	CORSAllowedOrigins  []string
+	CORSAllowedMethods  []string
+	CORSAllowedHeaders  []string
+	CORSExposeHeaders   []string
+	CORSAllowCredentials bool
+	CORSMaxAge           time.Duration
 
 	JWTSecret        string
 	JWTRefreshSecret string
@@ -86,6 +92,14 @@ func Load() (*Config, error) {
 	if err != nil || authRPM < 0 {
 		return nil, fmt.Errorf("invalid RATE_LIMIT_AUTH_RPM")
 	}
+	corsAllowCredentials, err := strconv.ParseBool(getEnv("CORS_ALLOW_CREDENTIALS", "true"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid CORS_ALLOW_CREDENTIALS")
+	}
+	corsMaxAgeSec, err := strconv.Atoi(getEnv("CORS_MAX_AGE_SECONDS", "43200"))
+	if err != nil || corsMaxAgeSec < 0 {
+		return nil, fmt.Errorf("invalid CORS_MAX_AGE_SECONDS")
+	}
 	inviteTemplateID, err := parseInt64Env("MAILJET_TEMPLATE_INVITE_ID", 0)
 	if err != nil {
 		return nil, fmt.Errorf("invalid MAILJET_TEMPLATE_INVITE_ID: %w", err)
@@ -100,6 +114,12 @@ func Load() (*Config, error) {
 		Port:                             port,
 		DatabaseURL:                      databaseURL,
 		AppBaseURL:                       getEnv("APP_BASE_URL", "http://localhost:5173"),
+		CORSAllowedOrigins:               csvOrDefault(os.Getenv("CORS_ALLOWED_ORIGINS"), []string{"http://localhost:5173", "http://127.0.0.1:5173"}),
+		CORSAllowedMethods:               csvOrDefault(os.Getenv("CORS_ALLOWED_METHODS"), []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}),
+		CORSAllowedHeaders:               csvOrDefault(os.Getenv("CORS_ALLOWED_HEADERS"), []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID", "X-Organization-ID", "X-Internal-Key"}),
+		CORSExposeHeaders:                csvOrDefault(os.Getenv("CORS_EXPOSE_HEADERS"), []string{"X-Request-ID"}),
+		CORSAllowCredentials:             corsAllowCredentials,
+		CORSMaxAge:                       time.Duration(corsMaxAgeSec) * time.Second,
 		JWTSecret:                        jwtSecret,
 		JWTRefreshSecret:                 jwtRefreshSecret,
 		JWTAccessTTL:                     time.Duration(accessMin) * time.Minute,
@@ -140,4 +160,23 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func csvOrDefault(raw string, fallback []string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return append([]string(nil), fallback...)
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		v := strings.TrimSpace(p)
+		if v != "" {
+			out = append(out, v)
+		}
+	}
+	if len(out) == 0 {
+		return append([]string(nil), fallback...)
+	}
+	return out
 }

@@ -14,11 +14,12 @@ type Config struct {
 	Port   int
 
 	DatabaseURL string
+	AppBaseURL  string
 
-	JWTSecret         string
-	JWTRefreshSecret  string
-	JWTAccessTTL      time.Duration
-	JWTRefreshTTL     time.Duration
+	JWTSecret        string
+	JWTRefreshSecret string
+	JWTAccessTTL     time.Duration
+	JWTRefreshTTL    time.Duration
 
 	SMTPHost     string
 	SMTPPort     int
@@ -26,6 +27,14 @@ type Config struct {
 	SMTPPassword string
 	SMTPFrom     string
 	SMTPFromName string
+
+	MailjetAPIKey                    string
+	MailjetAPISecret                 string
+	MailjetFrom                      string
+	MailjetFromName                  string
+	MailjetFromEmail                 string
+	MailjetTemplateInviteID          int64
+	MailjetTemplateBillingReminderID int64
 
 	SMSProvider string
 	SMSAPIKey   string
@@ -77,29 +86,53 @@ func Load() (*Config, error) {
 	if err != nil || authRPM < 0 {
 		return nil, fmt.Errorf("invalid RATE_LIMIT_AUTH_RPM")
 	}
+	inviteTemplateID, err := parseInt64Env("MAILJET_TEMPLATE_INVITE_ID", 0)
+	if err != nil {
+		return nil, fmt.Errorf("invalid MAILJET_TEMPLATE_INVITE_ID: %w", err)
+	}
+	billingTemplateID, err := parseInt64Env("MAILJET_TEMPLATE_BILLING_REMINDER_ID", 0)
+	if err != nil {
+		return nil, fmt.Errorf("invalid MAILJET_TEMPLATE_BILLING_REMINDER_ID: %w", err)
+	}
 
 	cfg := &Config{
-		AppEnv:        getEnv("APP_ENV", "development"),
-		Port:          port,
-		DatabaseURL:   databaseURL,
-		JWTSecret:     jwtSecret,
-		JWTRefreshSecret: jwtRefreshSecret,
-		JWTAccessTTL:     time.Duration(accessMin) * time.Minute,
-		JWTRefreshTTL:    time.Duration(refreshHrs) * time.Hour,
-		SMTPHost:         getEnv("SMTP_HOST", ""),
-		SMTPPort:         smtpPort,
-		SMTPUser:         getEnv("SMTP_USER", ""),
-		SMTPPassword:     getEnv("SMTP_PASSWORD", ""),
-		SMTPFrom:         getEnv("SMTP_FROM", ""),
-		SMTPFromName:     getEnv("SMTP_FROM_NAME", ""),
-		SMSProvider:      getEnv("SMS_PROVIDER", ""),
-		SMSAPIKey:        getEnv("SMS_API_KEY", ""),
-		InternalJobSecret: strings.TrimSpace(os.Getenv("INTERNAL_JOB_SECRET")),
-		AuthLoginRPM:      authRPM,
-		LogLevel:          getEnv("LOG_LEVEL", "info"),
+		AppEnv:                           getEnv("APP_ENV", "development"),
+		Port:                             port,
+		DatabaseURL:                      databaseURL,
+		AppBaseURL:                       getEnv("APP_BASE_URL", "http://localhost:5173"),
+		JWTSecret:                        jwtSecret,
+		JWTRefreshSecret:                 jwtRefreshSecret,
+		JWTAccessTTL:                     time.Duration(accessMin) * time.Minute,
+		JWTRefreshTTL:                    time.Duration(refreshHrs) * time.Hour,
+		SMTPHost:                         getEnv("SMTP_HOST", ""),
+		SMTPPort:                         smtpPort,
+		SMTPUser:                         getEnv("SMTP_USER", ""),
+		SMTPPassword:                     getEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:                         getEnv("SMTP_FROM", ""),
+		SMTPFromName:                     getEnv("SMTP_FROM_NAME", ""),
+		MailjetAPIKey:                    getEnv("MAILJET_API_KEY", ""),
+		MailjetAPISecret:                 getEnv("MAILJET_API_SECRET", ""),
+		MailjetFrom:                      getEnv("MAILJET_FROM", ""),
+		MailjetFromName:                  getEnv("MAILJET_FROM_NAME", ""),
+		MailjetFromEmail:                 getEnv("MAILJET_FROM_EMAIL", ""),
+		MailjetTemplateInviteID:          inviteTemplateID,
+		MailjetTemplateBillingReminderID: billingTemplateID,
+		SMSProvider:                      getEnv("SMS_PROVIDER", ""),
+		SMSAPIKey:                        getEnv("SMS_API_KEY", ""),
+		InternalJobSecret:                strings.TrimSpace(os.Getenv("INTERNAL_JOB_SECRET")),
+		AuthLoginRPM:                     authRPM,
+		LogLevel:                         getEnv("LOG_LEVEL", "info"),
 	}
 
 	return cfg, nil
+}
+
+func parseInt64Env(key string, fallback int64) (int64, error) {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return fallback, nil
+	}
+	return strconv.ParseInt(raw, 10, 64)
 }
 
 func getEnv(key, fallback string) string {

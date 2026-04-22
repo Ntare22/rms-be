@@ -50,7 +50,15 @@ func (s *Service) List(ctx context.Context, actor Actor, organizationID string, 
 	}
 	out := make([]UserResponse, 0, len(rows))
 	for i := range rows {
-		out = append(out, toResponse(&rows[i]))
+		resp := toResponse(&rows[i])
+		if rows[i].Role == UserRoleManager {
+			bids, err := s.repo.ListManagerBuildingIDs(ctx, organizationID, rows[i].ID)
+			if err != nil {
+				return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+			}
+			resp.ManagerBuildingIDs = bids
+		}
+		out = append(out, resp)
 	}
 	return &UserListResponse{
 		Items:    out,
@@ -113,7 +121,23 @@ func (s *Service) Create(ctx context.Context, actor Actor, organizationID string
 	if err := s.repo.Create(ctx, u); err != nil {
 		return nil, apierrors.Wrap(err, apierrors.ErrConflict)
 	}
+	assignments := normalizeStringIDs(req.ManagerBuildingIDs)
+	if u.Role == UserRoleManager {
+		ok, err := s.validateManagerBuildingAssignments(ctx, organizationID, assignments)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, apierrors.ErrValidation
+		}
+		if err := s.repo.ReplaceManagerBuildingAssignments(ctx, organizationID, u.ID, assignments); err != nil {
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+	}
 	r := toResponse(u)
+	if u.Role == UserRoleManager {
+		r.ManagerBuildingIDs = assignments
+	}
 	return &r, nil
 }
 
@@ -193,6 +217,10 @@ func (s *Service) Patch(ctx context.Context, actor Actor, organizationID, userID
 		}
 		updates["role"] = string(newRole)
 	}
+	assignments := []string(nil)
+	if req.ManagerBuildingIDs != nil {
+		assignments = normalizeStringIDs(*req.ManagerBuildingIDs)
+	}
 	if req.Status != nil {
 		st := parseStatus(*req.Status)
 		if st == "" {
@@ -215,7 +243,33 @@ func (s *Service) Patch(ctx context.Context, actor Actor, organizationID, userID
 	if err != nil {
 		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
 	}
+	if req.ManagerBuildingIDs != nil || refreshed.Role == UserRoleManager {
+		switch refreshed.Role {
+		case UserRoleManager:
+			ok, err := s.validateManagerBuildingAssignments(ctx, organizationID, assignments)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
+				return nil, apierrors.ErrValidation
+			}
+			if err := s.repo.ReplaceManagerBuildingAssignments(ctx, organizationID, refreshed.ID, assignments); err != nil {
+				return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+			}
+		default:
+			if err := s.repo.ReplaceManagerBuildingAssignments(ctx, organizationID, refreshed.ID, nil); err != nil {
+				return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+			}
+		}
+	}
 	r := toResponse(refreshed)
+	if refreshed.Role == UserRoleManager {
+		bids, err := s.repo.ListManagerBuildingIDs(ctx, organizationID, refreshed.ID)
+		if err != nil {
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+		r.ManagerBuildingIDs = bids
+	}
 	return &r, nil
 }
 
@@ -269,9 +323,9 @@ func actorCanAssignRole(actorRole string, assign UserRole) bool {
 	case middleware.RoleAdmin:
 		return true
 	case middleware.RoleLandlord:
-		return assign == UserRoleManager || assign == UserRoleStaff
+		return assign == UserRoleManager || assign == UserRoleStaff || assign == UserRoleTenant
 	case middleware.RoleManager:
-		return assign == UserRoleStaff
+		return assign == UserRoleStaff || assign == UserRoleTenant
 	default:
 		return false
 	}
@@ -283,9 +337,9 @@ func actorCanModifyTarget(actorRole string, target *User) bool {
 	case middleware.RoleAdmin:
 		return true
 	case middleware.RoleLandlord:
-		return target.Role == UserRoleManager || target.Role == UserRoleStaff
+		return target.Role == UserRoleManager || target.Role == UserRoleStaff || target.Role == UserRoleTenant
 	case middleware.RoleManager:
-		return target.Role == UserRoleStaff
+		return target.Role == UserRoleStaff || target.Role == UserRoleTenant
 	default:
 		return false
 	}
@@ -294,7 +348,7 @@ func actorCanModifyTarget(actorRole string, target *User) bool {
 func parseRole(s string) (UserRole, error) {
 	r := UserRole(strings.TrimSpace(strings.ToLower(s)))
 	switch r {
-	case UserRoleAdmin, UserRoleLandlord, UserRoleManager, UserRoleStaff:
+	case UserRoleAdmin, UserRoleLandlord, UserRoleManager, UserRoleStaff, UserRoleTenant:
 		return r, nil
 	default:
 		var z UserRole
@@ -327,4 +381,29 @@ func toResponse(u *User) UserResponse {
 		CreatedBy:      u.CreatedBy,
 		UpdatedBy:      u.UpdatedBy,
 	}
+}
+
+func normalizeStringIDs(ids []string) []string {
+	out := make([]string, 0, len(ids))
+	seen := make(map[string]bool, len(ids))
+	for _, raw := range ids {
+		v := strings.TrimSpace(raw)
+		if v == "" || seen[v] {
+			continue
+		}
+		seen[v] = true
+		out = append(out, v)
+	}
+	return out
+}
+
+func (s *Service) validateManagerBuildingAssignments(ctx context.Context, organizationID string, ids []string) (bool, error) {
+	if len(ids) == 0 {
+		return true, nil
+	}
+	n, err := s.repo.CountBuildingsInOrg(ctx, organizationID, ids)
+	if err != nil {
+		return false, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	return int64(len(ids)) == n, nil
 }

@@ -21,12 +21,17 @@ type Actor struct {
 
 // Service contains tenant business logic.
 type Service struct {
-	repo *Repository
+	repo       *Repository
+	onboarding tenantOnboarding
+}
+
+type tenantOnboarding interface {
+	ProvisionTenantInvite(ctx context.Context, organizationID, tenantID, email, firstName, lastName string) (*users.User, error)
 }
 
 // NewService constructs a Service.
-func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo *Repository, onboarding tenantOnboarding) *Service {
+	return &Service{repo: repo, onboarding: onboarding}
 }
 
 // List returns paginated tenants with optional search filters.
@@ -50,6 +55,39 @@ func (s *Service) List(ctx context.Context, actor Actor, organizationID, nameQ, 
 		st = &v
 	}
 	rows, total, err := s.repo.List(ctx, organizationID, nameQ, emailQ, phoneQ, st, offset, pageSize)
+	if isManagerRole(actor.Role) {
+		ids, err := s.repo.ListManagerBuildingIDs(ctx, organizationID, actor.UserID)
+		if err != nil {
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+		rows, total, err = s.repo.ListByBuildings(ctx, organizationID, ids, nameQ, emailQ, phoneQ, st, offset, pageSize)
+		if err != nil {
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+	}
+	if isTenantRole(actor.Role) {
+		tenantID, err := s.repo.TenantIDByUser(ctx, organizationID, actor.UserID)
+		if err != nil {
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+		if strings.TrimSpace(tenantID) == "" {
+			return &TenantListResponse{Items: []TenantResponse{}, Page: page, PageSize: pageSize, Total: 0}, nil
+		}
+		t, err := s.repo.GetByIDInOrg(ctx, organizationID, tenantID)
+		if err != nil {
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+		var counts map[string]int
+		var units map[string]CurrentUnitSummary
+		if includeSummary {
+			counts, units, err = s.repo.ActiveLeaseStats(ctx, organizationID, []string{tenantID})
+			if err != nil {
+				return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+			}
+		}
+		r := toResponse(t, includeSummary, counts, units)
+		return &TenantListResponse{Items: []TenantResponse{r}, Page: page, PageSize: pageSize, Total: 1}, nil
+	}
 	if err != nil {
 		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
 	}
@@ -81,6 +119,9 @@ func (s *Service) Create(ctx context.Context, actor Actor, organizationID string
 	if !canMutateTenants(actor.Role) {
 		return nil, apierrors.ErrForbidden
 	}
+	if isManagerRole(actor.Role) || isTenantRole(actor.Role) {
+		return nil, apierrors.ErrForbidden
+	}
 	st := parseTenantStatus(req.Status)
 	if st == "" {
 		st = TenantStatusActive
@@ -101,6 +142,8 @@ func (s *Service) Create(ctx context.Context, actor Actor, organizationID string
 		SmsVerified:    req.SmsVerified,
 		Locale:         strings.TrimSpace(req.Locale),
 		Timezone:       strings.TrimSpace(req.Timezone),
+		BillingDueDay:  req.BillingDueDay,
+		BillingChannel: strings.TrimSpace(strings.ToLower(req.BillingChannel)),
 		Status:         st,
 	}
 	if uid != "" {
@@ -109,6 +152,16 @@ func (s *Service) Create(ctx context.Context, actor Actor, organizationID string
 	}
 	if err := s.repo.Create(ctx, t); err != nil {
 		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if s.onboarding != nil && strings.TrimSpace(t.Email) != "" {
+		u, err := s.onboarding.ProvisionTenantInvite(ctx, organizationID, t.ID, t.Email, t.FirstName, t.LastName)
+		if err != nil {
+			return nil, err
+		}
+		if u != nil && strings.TrimSpace(u.ID) != "" {
+			_ = s.repo.Update(ctx, organizationID, t.ID, map[string]any{"user_id": u.ID})
+			t.UserID = &u.ID
+		}
 	}
 	r := toResponse(t, false, nil, nil)
 	return &r, nil
@@ -134,6 +187,28 @@ func (s *Service) Get(ctx context.Context, actor Actor, organizationID, tenantID
 		}
 		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
 	}
+	if isManagerRole(actor.Role) {
+		ids, err := s.repo.ListManagerBuildingIDs(ctx, organizationID, actor.UserID)
+		if err != nil {
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+		t, err = s.repo.GetByIDInOrgAndBuildings(ctx, organizationID, tenantID, ids)
+		if err != nil {
+			if stderrors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, apierrors.ErrForbidden
+			}
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+	}
+	if isTenantRole(actor.Role) {
+		selfID, err := s.repo.TenantIDByUser(ctx, organizationID, actor.UserID)
+		if err != nil {
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+		if !strings.EqualFold(strings.TrimSpace(selfID), tenantID) {
+			return nil, apierrors.ErrForbidden
+		}
+	}
 	var counts map[string]int
 	var units map[string]CurrentUnitSummary
 	if includeSummary {
@@ -154,6 +229,9 @@ func (s *Service) Patch(ctx context.Context, actor Actor, organizationID, tenant
 		return nil, err
 	}
 	if !canMutateTenants(actor.Role) {
+		return nil, apierrors.ErrForbidden
+	}
+	if isManagerRole(actor.Role) || isTenantRole(actor.Role) {
 		return nil, apierrors.ErrForbidden
 	}
 	t, err := s.repo.GetByIDInOrg(ctx, organizationID, tenantID)
@@ -202,6 +280,9 @@ func (s *Service) Delete(ctx context.Context, actor Actor, organizationID, tenan
 		return err
 	}
 	if !canMutateTenants(actor.Role) {
+		return apierrors.ErrForbidden
+	}
+	if isManagerRole(actor.Role) || isTenantRole(actor.Role) {
 		return apierrors.ErrForbidden
 	}
 	if _, err := s.repo.GetByIDInOrg(ctx, organizationID, tenantID); err != nil {
@@ -256,6 +337,12 @@ func patchUpdates(cur *Tenant, req *PatchTenantRequest) map[string]any {
 	if req.Timezone != nil {
 		out["timezone"] = strings.TrimSpace(*req.Timezone)
 	}
+	if req.BillingDueDay != nil {
+		out["billing_due_day"] = req.BillingDueDay
+	}
+	if req.BillingChannel != nil {
+		out["billing_channel"] = strings.TrimSpace(strings.ToLower(*req.BillingChannel))
+	}
 	if req.Status != nil {
 		if st := parseTenantStatus(strings.TrimSpace(*req.Status)); st != "" {
 			out["status"] = string(st)
@@ -289,7 +376,7 @@ func assertOrgScope(actor Actor, organizationID string) error {
 func canReadTenants(role string) bool {
 	r := strings.TrimSpace(strings.ToLower(role))
 	switch r {
-	case middleware.RoleAdmin, middleware.RoleLandlord, middleware.RoleManager, string(users.UserRoleStaff):
+	case middleware.RoleAdmin, middleware.RoleLandlord, middleware.RoleManager, string(users.UserRoleStaff), string(users.UserRoleTenant):
 		return true
 	default:
 		return false
@@ -299,11 +386,19 @@ func canReadTenants(role string) bool {
 func canMutateTenants(role string) bool {
 	r := strings.TrimSpace(strings.ToLower(role))
 	switch r {
-	case middleware.RoleAdmin, middleware.RoleLandlord, middleware.RoleManager:
+	case middleware.RoleAdmin, middleware.RoleLandlord:
 		return true
 	default:
 		return false
 	}
+}
+
+func isManagerRole(role string) bool {
+	return strings.EqualFold(strings.TrimSpace(role), middleware.RoleManager)
+}
+
+func isTenantRole(role string) bool {
+	return strings.EqualFold(strings.TrimSpace(role), string(users.UserRoleTenant))
 }
 
 func parseTenantStatus(s string) TenantStatus {
@@ -325,11 +420,14 @@ func toResponse(t *Tenant, includeSummary bool, counts map[string]int, units map
 		FullName:       t.FullName,
 		Email:          t.Email,
 		Phone:          t.Phone,
+		UserID:         t.UserID,
 		EmailOptIn:     t.EmailOptIn,
 		SmsOptIn:       t.SmsOptIn,
 		SmsVerified:    t.SmsVerified,
 		Locale:         t.Locale,
 		Timezone:       t.Timezone,
+		BillingDueDay:  t.BillingDueDay,
+		BillingChannel: t.BillingChannel,
 		Status:         string(t.Status),
 		CreatedAt:      t.CreatedAt,
 		UpdatedAt:      t.UpdatedAt,

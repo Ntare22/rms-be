@@ -46,6 +46,9 @@ func (s *Service) List(ctx context.Context, actor Actor, organizationID, buildin
 	if err := s.ensureBuilding(ctx, organizationID, buildingID); err != nil {
 		return nil, err
 	}
+	if err := s.ensureManagerBuildingAccess(ctx, actor, organizationID, buildingID); err != nil {
+		return nil, err
+	}
 	var st *UnitStatus
 	if t := strings.TrimSpace(statusFilter); t != "" {
 		v := parseUnitStatus(t)
@@ -99,6 +102,9 @@ func (s *Service) Create(ctx context.Context, actor Actor, organizationID, build
 	if err := s.ensureBuilding(ctx, organizationID, buildingID); err != nil {
 		return nil, err
 	}
+	if err := s.ensureManagerBuildingAccess(ctx, actor, organizationID, buildingID); err != nil {
+		return nil, err
+	}
 	st := parseUnitStatus(req.Status)
 	if st == "" {
 		st = UnitStatusVacant
@@ -145,6 +151,9 @@ func (s *Service) Get(ctx context.Context, actor Actor, organizationID, building
 	if err := s.ensureBuilding(ctx, organizationID, buildingID); err != nil {
 		return nil, err
 	}
+	if err := s.ensureManagerBuildingAccess(ctx, actor, organizationID, buildingID); err != nil {
+		return nil, err
+	}
 	u, err := s.repo.GetByIDInBuilding(ctx, organizationID, buildingID, unitID)
 	if err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
@@ -182,6 +191,9 @@ func (s *Service) Patch(ctx context.Context, actor Actor, organizationID, buildi
 		return nil, apierrors.ErrForbidden
 	}
 	if err := s.ensureBuilding(ctx, organizationID, buildingID); err != nil {
+		return nil, err
+	}
+	if err := s.ensureManagerBuildingAccess(ctx, actor, organizationID, buildingID); err != nil {
 		return nil, err
 	}
 	u, err := s.repo.GetByIDInBuilding(ctx, organizationID, buildingID, unitID)
@@ -232,6 +244,9 @@ func (s *Service) Delete(ctx context.Context, actor Actor, organizationID, build
 		return apierrors.ErrForbidden
 	}
 	if err := s.ensureBuilding(ctx, organizationID, buildingID); err != nil {
+		return err
+	}
+	if err := s.ensureManagerBuildingAccess(ctx, actor, organizationID, buildingID); err != nil {
 		return err
 	}
 	if _, err := s.repo.GetByIDInBuilding(ctx, organizationID, buildingID, unitID); err != nil {
@@ -324,6 +339,22 @@ func parseUnitStatus(s string) UnitStatus {
 	default:
 		return ""
 	}
+}
+
+func (s *Service) ensureManagerBuildingAccess(ctx context.Context, actor Actor, organizationID, buildingID string) error {
+	if !strings.EqualFold(strings.TrimSpace(actor.Role), middleware.RoleManager) {
+		return nil
+	}
+	ids, err := s.repo.ListManagerBuildingIDs(ctx, organizationID, actor.UserID)
+	if err != nil {
+		return apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	for _, id := range ids {
+		if strings.EqualFold(strings.TrimSpace(id), strings.TrimSpace(buildingID)) {
+			return nil
+		}
+	}
+	return apierrors.ErrForbidden
 }
 
 func toResponse(u *Unit, occ *OccupancySummary) UnitResponse {

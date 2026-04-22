@@ -14,6 +14,7 @@ const (
 	UserRoleLandlord UserRole = "landlord"
 	UserRoleManager  UserRole = "manager"
 	UserRoleStaff    UserRole = "staff"
+	UserRoleTenant   UserRole = "tenant"
 )
 
 // UserStatus controls login and lifecycle for org users.
@@ -42,6 +43,7 @@ type User struct {
 	FirstName      string         `gorm:"size:120;not null" json:"first_name"`
 	LastName       string         `gorm:"size:120" json:"last_name,omitempty"`
 	Phone          string         `gorm:"size:64" json:"phone,omitempty"`
+	TenantID       *string        `gorm:"type:uuid;index" json:"tenant_id,omitempty"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`

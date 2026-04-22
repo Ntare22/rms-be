@@ -45,6 +45,33 @@ definitions:
       user:
         $ref: '#/definitions/auth.UserSummary'
     type: object
+  auth.PasswordSetupConfirmRequest:
+    properties:
+      password:
+        example: securePass123
+        maxLength: 72
+        minLength: 8
+        type: string
+      token:
+        example: ABCD...
+        minLength: 20
+        type: string
+    required:
+    - password
+    - token
+    type: object
+  auth.PasswordSetupRequest:
+    properties:
+      email:
+        example: tenant@acme.com
+        type: string
+      organization_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    required:
+    - email
+    - organization_id
+    type: object
   auth.RefreshRequest:
     properties:
       refresh_token:
@@ -106,6 +133,12 @@ definitions:
     - organization_name
     - organization_slug
     - password
+    type: object
+  auth.StatusResponse:
+    properties:
+      status:
+        example: ok
+        type: string
     type: object
   auth.UserSummary:
     properties:
@@ -262,6 +295,18 @@ definitions:
     type: object
   leases.CreateLeaseRequest:
     properties:
+      billing_amount_override_minor:
+        minimum: 0
+        type: integer
+      billing_due_day:
+        maximum: 31
+        minimum: 1
+        type: integer
+      billing_reminder_channel:
+        enum:
+        - email
+        - sms
+        type: string
       currency:
         example: USD
         type: string
@@ -280,10 +325,12 @@ definitions:
       status:
         enum:
         - draft
+        - pending_approval
         - active
+        - rejected
         - ended
         - cancelled
-        example: draft
+        example: pending_approval
         type: string
       tenant_id:
         type: string
@@ -299,6 +346,12 @@ definitions:
     properties:
       end_date:
         type: string
+      note:
+        maxLength: 2000
+        type: string
+    type: object
+  leases.LeaseDecisionRequest:
+    properties:
       note:
         maxLength: 2000
         type: string
@@ -321,6 +374,12 @@ definitions:
     type: object
   leases.LeaseResponse:
     properties:
+      billing_amount_override_minor:
+        type: integer
+      billing_due_day:
+        type: integer
+      billing_reminder_channel:
+        type: string
       created_at:
         type: string
       created_by:
@@ -360,6 +419,18 @@ definitions:
     type: object
   leases.PatchLeaseRequest:
     properties:
+      billing_amount_override_minor:
+        minimum: 0
+        type: integer
+      billing_due_day:
+        maximum: 31
+        minimum: 1
+        type: integer
+      billing_reminder_channel:
+        enum:
+        - email
+        - sms
+        type: string
       currency:
         type: string
       deposit_amount_minor:
@@ -377,7 +448,9 @@ definitions:
       status:
         enum:
         - draft
+        - pending_approval
         - active
+        - rejected
         - ended
         - cancelled
         type: string
@@ -547,6 +620,51 @@ definitions:
         maxLength: 512
         type: string
     type: object
+  payments.InitiatePaymentRequest:
+    properties:
+      amount_minor:
+        minimum: 1
+        type: integer
+      currency:
+        example: USD
+        type: string
+      lease_id:
+        type: string
+      method:
+        enum:
+        - ach
+        - card
+        - cash
+        - check
+        - wire
+        - other
+        example: card
+        type: string
+    required:
+    - amount_minor
+    - lease_id
+    type: object
+  payments.PaymentResponse:
+    properties:
+      amount_minor:
+        type: integer
+      created_at:
+        type: string
+      currency:
+        type: string
+      external_ref:
+        type: string
+      id:
+        type: string
+      lease_id:
+        type: string
+      method:
+        type: string
+      next_action:
+        type: string
+      status:
+        type: string
+    type: object
   response.Envelope-auth_AuthSessionResponse:
     properties:
       data:
@@ -561,6 +679,11 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/auth.RefreshResponse'
+    type: object
+  response.Envelope-auth_StatusResponse:
+    properties:
+      data:
+        $ref: '#/definitions/auth.StatusResponse'
     type: object
   response.Envelope-buildings_BuildingListResponse:
     properties:
@@ -586,6 +709,11 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/organizations.OrganizationResponse'
+    type: object
+  response.Envelope-payments_PaymentResponse:
+    properties:
+      data:
+        $ref: '#/definitions/payments.PaymentResponse'
     type: object
   response.Envelope-tenants_TenantListResponse:
     properties:
@@ -633,6 +761,17 @@ definitions:
     type: object
   tenants.CreateTenantRequest:
     properties:
+      billing_channel:
+        enum:
+        - email
+        - sms
+        example: email
+        type: string
+      billing_due_day:
+        example: 1
+        maximum: 31
+        minimum: 1
+        type: integer
       email:
         example: jordan.lee@example.com
         maxLength: 320
@@ -692,6 +831,15 @@ definitions:
     type: object
   tenants.PatchTenantRequest:
     properties:
+      billing_channel:
+        enum:
+        - email
+        - sms
+        type: string
+      billing_due_day:
+        maximum: 31
+        minimum: 1
+        type: integer
       email:
         maxLength: 320
         type: string
@@ -748,6 +896,11 @@ definitions:
       active_lease_count:
         example: 1
         type: integer
+      billing_channel:
+        example: email
+        type: string
+      billing_due_day:
+        type: integer
       created_at:
         type: string
       created_by:
@@ -793,6 +946,8 @@ definitions:
       updated_at:
         type: string
       updated_by:
+        type: string
+      user_id:
         type: string
     type: object
   units.CreateUnitRequest:
@@ -929,6 +1084,10 @@ definitions:
         example: Rivera
         maxLength: 120
         type: string
+      manager_building_ids:
+        items:
+          type: string
+        type: array
       password:
         example: SecurePass123
         maxLength: 72
@@ -944,6 +1103,7 @@ definitions:
         - landlord
         - manager
         - staff
+        - tenant
         example: staff
         type: string
       status:
@@ -973,6 +1133,10 @@ definitions:
         example: Rivera
         maxLength: 120
         type: string
+      manager_building_ids:
+        items:
+          type: string
+        type: array
       password:
         example: NewSecurePass456
         maxLength: 72
@@ -988,6 +1152,7 @@ definitions:
         - landlord
         - manager
         - staff
+        - tenant
         example: manager
         type: string
       status:
@@ -1032,6 +1197,10 @@ definitions:
       last_name:
         example: Rivera
         type: string
+      manager_building_ids:
+        items:
+          type: string
+        type: array
       organization_id:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
@@ -1112,6 +1281,82 @@ paths:
       security:
       - BearerAuth: []
       summary: Current user
+      tags:
+      - auth
+  /api/v1/auth/password/setup/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Consumes one-time setup token and sets a new password for the invited
+        account.
+      parameters:
+      - description: Password setup confirmation payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.PasswordSetupConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-auth_StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      summary: Confirm password setup
+      tags:
+      - auth
+  /api/v1/auth/password/setup/request:
+    post:
+      consumes:
+      - application/json
+      description: Creates a one-time password setup token and sends invite email
+        for an existing organization user.
+      parameters:
+      - description: Password setup request payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.PasswordSetupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-auth_StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Send password setup invite
       tags:
       - auth
   /api/v1/auth/refresh:
@@ -2057,6 +2302,58 @@ paths:
       summary: Update lease
       tags:
       - leases
+  /api/v1/organizations/{id}/leases/{leaseId}/approve:
+    post:
+      consumes:
+      - application/json
+      description: Tenant approves a pending lease. Lease transitions to active and
+        unit occupancy is recalculated.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lease ID
+        format: uuid
+        in: path
+        name: leaseId
+        required: true
+        type: string
+      - description: Optional decision note
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/leases.LeaseDecisionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-leases_LeaseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Approve lease
+      tags:
+      - leases
   /api/v1/organizations/{id}/leases/{leaseId}/end:
     post:
       consumes:
@@ -2111,6 +2408,109 @@ paths:
       summary: End lease
       tags:
       - leases
+  /api/v1/organizations/{id}/leases/{leaseId}/reject:
+    post:
+      consumes:
+      - application/json
+      description: Tenant rejects a pending lease. Lease transitions to rejected and
+        occupancy is recalculated.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lease ID
+        format: uuid
+        in: path
+        name: leaseId
+        required: true
+        type: string
+      - description: Optional decision note
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/leases.LeaseDecisionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-leases_LeaseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Reject lease
+      tags:
+      - leases
+  /api/v1/organizations/{id}/payments/initiate:
+    post:
+      consumes:
+      - application/json
+      description: Creates a pending payment placeholder for tenant or manager initiated
+        payment flow.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Payment initiation payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/payments.InitiatePaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_PaymentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Initiate payment
+      tags:
+      - payments
   /api/v1/organizations/{id}/tenants:
     get:
       description: '**Nested route:** `/api/v1/organizations/{id}/tenants`. **Admin:**

@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 	"sync/atomic"
 
 	"rms-be/internal/api/clock"
@@ -12,7 +13,9 @@ import (
 	"rms-be/internal/modules/auth"
 	"rms-be/internal/modules/buildings"
 	"rms-be/internal/modules/leases"
+	"rms-be/internal/modules/notifications"
 	"rms-be/internal/modules/organizations"
+	"rms-be/internal/modules/payments"
 	"rms-be/internal/modules/tenants"
 	"rms-be/internal/modules/units"
 	"rms-be/internal/modules/users"
@@ -34,6 +37,7 @@ type Dependencies struct {
 	Units          *units.Handler
 	Tenants        *tenants.Handler
 	Leases         *leases.Handler
+	Payments       *payments.Handler
 
 	shuttingDown atomic.Bool
 }
@@ -47,8 +51,29 @@ func NewDependencies(cfg *config.Config, log logger.Logger, db database.DB, clk 
 	gdb := db.Gorm()
 	issuer := security.NewHS256TokenIssuer(cfg)
 	ph := security.BcryptHasher{}
+	mailjet := notifications.NewMailjetSender(cfg.MailjetAPIKey, cfg.MailjetAPISecret)
+	var mailer notifications.EmailSender = notifications.NoopEmailSender{}
+	if mailjet.Enabled() {
+		mailer = mailjet
+	}
+	fromEmail := strings.TrimSpace(cfg.MailjetFromEmail)
+	if fromEmail == "" {
+		fromEmail = strings.TrimSpace(cfg.MailjetFrom)
+	}
+	fromName := strings.TrimSpace(cfg.MailjetFromName)
+	if fromName == "" {
+		fromName = strings.TrimSpace(cfg.SMTPFromName)
+	}
+	if fromName == "" {
+		fromName = "RMS"
+	}
 	authRepo := auth.NewRepository(gdb)
-	authSvc := auth.NewService(authRepo, ph, issuer)
+	authSvc := auth.NewService(authRepo, ph, issuer, mailer, auth.PasswordSetupConfig{
+		BaseURL:          cfg.AppBaseURL,
+		FromName:         fromName,
+		From:             fromEmail,
+		InviteTemplateID: cfg.MailjetTemplateInviteID,
+	})
 	authHandler := auth.NewHandler(authSvc)
 
 	orgRepo := organizations.NewRepository(gdb)
@@ -68,12 +93,16 @@ func NewDependencies(cfg *config.Config, log logger.Logger, db database.DB, clk 
 	unitHandler := units.NewHandler(unitSvc)
 
 	tntRepo := tenants.NewRepository(gdb)
-	tntSvc := tenants.NewService(tntRepo)
+	tntSvc := tenants.NewService(tntRepo, authSvc)
 	tntHandler := tenants.NewHandler(tntSvc)
 
 	leaseRepo := leases.NewRepository(gdb)
 	leaseSvc := leases.NewService(leaseRepo)
 	leaseHandler := leases.NewHandler(leaseSvc)
+
+	paymentRepo := payments.NewRepository(gdb)
+	paymentSvc := payments.NewService(paymentRepo)
+	paymentHandler := payments.NewHandler(paymentSvc)
 
 	return &Dependencies{
 		Config:         cfg,
@@ -89,6 +118,7 @@ func NewDependencies(cfg *config.Config, log logger.Logger, db database.DB, clk 
 		Units:          unitHandler,
 		Tenants:        tntHandler,
 		Leases:         leaseHandler,
+		Payments:       paymentHandler,
 	}, nil
 }
 

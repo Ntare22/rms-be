@@ -50,6 +50,13 @@ func (s *Service) List(ctx context.Context, actor Actor, organizationID string, 
 		st = &v
 	}
 	rows, total, err := s.repo.ListByOrganization(ctx, organizationID, st, offset, pageSize)
+	if isManager(actor.Role) {
+		ids, err := s.repo.ListManagerBuildingIDs(ctx, organizationID, actor.UserID)
+		if err != nil {
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+		rows, total, err = s.repo.ListByOrganizationAndIDs(ctx, organizationID, ids, st, offset, pageSize)
+	}
 	if err != nil {
 		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
 	}
@@ -72,6 +79,9 @@ func (s *Service) Create(ctx context.Context, actor Actor, organizationID string
 		return nil, err
 	}
 	if !canMutateBuildings(actor.Role) {
+		return nil, apierrors.ErrForbidden
+	}
+	if isManager(actor.Role) {
 		return nil, apierrors.ErrForbidden
 	}
 	st := parseBuildingStatus(req.Status)
@@ -125,6 +135,15 @@ func (s *Service) Get(ctx context.Context, actor Actor, organizationID, building
 		}
 		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
 	}
+	if isManager(actor.Role) {
+		ok, err := s.isAssignedBuilding(ctx, organizationID, actor.UserID, buildingID)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, apierrors.ErrForbidden
+		}
+	}
 	r := toResponse(b)
 	return &r, nil
 }
@@ -145,6 +164,15 @@ func (s *Service) Patch(ctx context.Context, actor Actor, organizationID, buildi
 			return nil, apierrors.ErrNotFound
 		}
 		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if isManager(actor.Role) {
+		ok, err := s.isAssignedBuilding(ctx, organizationID, actor.UserID, buildingID)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, apierrors.ErrForbidden
+		}
 	}
 	if req.Status != nil {
 		t := strings.TrimSpace(*req.Status)
@@ -190,6 +218,15 @@ func (s *Service) Delete(ctx context.Context, actor Actor, organizationID, build
 			return apierrors.ErrNotFound
 		}
 		return apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if isManager(actor.Role) {
+		ok, err := s.isAssignedBuilding(ctx, organizationID, actor.UserID, buildingID)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return apierrors.ErrForbidden
+		}
 	}
 	n, err := s.repo.CountUnitsForBuilding(ctx, organizationID, buildingID)
 	if err != nil {
@@ -266,6 +303,23 @@ func canMutateBuildings(role string) bool {
 	default:
 		return false
 	}
+}
+
+func isManager(role string) bool {
+	return strings.EqualFold(strings.TrimSpace(role), middleware.RoleManager)
+}
+
+func (s *Service) isAssignedBuilding(ctx context.Context, organizationID, userID, buildingID string) (bool, error) {
+	ids, err := s.repo.ListManagerBuildingIDs(ctx, organizationID, userID)
+	if err != nil {
+		return false, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	for _, id := range ids {
+		if strings.EqualFold(strings.TrimSpace(id), strings.TrimSpace(buildingID)) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func parseBuildingStatus(s string) BuildingStatus {

@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 
 	"rms-be/internal/modules/audit"
+	"rms-be/internal/modules/auth"
 	"rms-be/internal/modules/buildings"
 	"rms-be/internal/modules/charges"
 	"rms-be/internal/modules/leases"
@@ -27,6 +28,8 @@ func AutoMigrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(
 		&organizations.Organization{},
 		&users.User{},
+		&users.ManagerBuildingAssignment{},
+		&auth.PasswordSetupToken{},
 		&buildings.Building{},
 		&units.Unit{},
 		&tenants.Tenant{},

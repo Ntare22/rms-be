@@ -104,6 +104,121 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/password/setup/confirm": {
+            "post": {
+                "description": "Consumes one-time setup token and sets a new password for the invited account.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Confirm password setup",
+                "parameters": [
+                    {
+                        "description": "Password setup confirmation payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.PasswordSetupConfirmRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-auth_StatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/password/setup/request": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a one-time password setup token and sends invite email for an existing organization user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Send password setup invite",
+                "parameters": [
+                    {
+                        "description": "Password setup request payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.PasswordSetupRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-auth_StatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/refresh": {
             "post": {
                 "description": "Exchanges a refresh token for a new access and refresh token pair (rotation).",
@@ -1466,6 +1581,84 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/organizations/{id}/leases/{leaseId}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tenant approves a pending lease. Lease transitions to active and unit occupancy is recalculated.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "leases"
+                ],
+                "summary": "Approve lease",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Organization ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Lease ID",
+                        "name": "leaseId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optional decision note",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/leases.LeaseDecisionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-leases_LeaseResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/organizations/{id}/leases/{leaseId}/end": {
             "post": {
                 "security": [
@@ -1537,6 +1730,161 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{id}/leases/{leaseId}/reject": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tenant rejects a pending lease. Lease transitions to rejected and occupancy is recalculated.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "leases"
+                ],
+                "summary": "Reject lease",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Organization ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Lease ID",
+                        "name": "leaseId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optional decision note",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/leases.LeaseDecisionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-leases_LeaseResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{id}/payments/initiate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a pending payment placeholder for tenant or manager initiated payment flow.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Initiate payment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Organization ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payment initiation payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/payments.InitiatePaymentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-payments_PaymentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorBody"
                         }
@@ -2209,6 +2557,43 @@ const docTemplate = `{
                 }
             }
         },
+        "auth.PasswordSetupConfirmRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "token"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 8,
+                    "example": "securePass123"
+                },
+                "token": {
+                    "type": "string",
+                    "minLength": 20,
+                    "example": "ABCD..."
+                }
+            }
+        },
+        "auth.PasswordSetupRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "organization_id"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "tenant@acme.com"
+                },
+                "organization_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
         "auth.RefreshRequest": {
             "type": "object",
             "required": [
@@ -2289,6 +2674,15 @@ const docTemplate = `{
                         "manager"
                     ],
                     "example": "admin"
+                }
+            }
+        },
+        "auth.StatusResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "example": "ok"
                 }
             }
         },
@@ -2511,6 +2905,22 @@ const docTemplate = `{
                 "unit_id"
             ],
             "properties": {
+                "billing_amount_override_minor": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "billing_due_day": {
+                    "type": "integer",
+                    "maximum": 31,
+                    "minimum": 1
+                },
+                "billing_reminder_channel": {
+                    "type": "string",
+                    "enum": [
+                        "email",
+                        "sms"
+                    ]
+                },
                 "currency": {
                     "type": "string",
                     "example": "USD"
@@ -2536,11 +2946,13 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "draft",
+                        "pending_approval",
                         "active",
+                        "rejected",
                         "ended",
                         "cancelled"
                     ],
-                    "example": "draft"
+                    "example": "pending_approval"
                 },
                 "tenant_id": {
                     "type": "string"
@@ -2556,6 +2968,15 @@ const docTemplate = `{
                 "end_date": {
                     "type": "string"
                 },
+                "note": {
+                    "type": "string",
+                    "maxLength": 2000
+                }
+            }
+        },
+        "leases.LeaseDecisionRequest": {
+            "type": "object",
+            "properties": {
                 "note": {
                     "type": "string",
                     "maxLength": 2000
@@ -2588,6 +3009,15 @@ const docTemplate = `{
         "leases.LeaseResponse": {
             "type": "object",
             "properties": {
+                "billing_amount_override_minor": {
+                    "type": "integer"
+                },
+                "billing_due_day": {
+                    "type": "integer"
+                },
+                "billing_reminder_channel": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -2644,6 +3074,22 @@ const docTemplate = `{
         "leases.PatchLeaseRequest": {
             "type": "object",
             "properties": {
+                "billing_amount_override_minor": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "billing_due_day": {
+                    "type": "integer",
+                    "maximum": 31,
+                    "minimum": 1
+                },
+                "billing_reminder_channel": {
+                    "type": "string",
+                    "enum": [
+                        "email",
+                        "sms"
+                    ]
+                },
                 "currency": {
                     "type": "string"
                 },
@@ -2668,7 +3114,9 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "draft",
+                        "pending_approval",
                         "active",
+                        "rejected",
                         "ended",
                         "cancelled"
                     ]
@@ -2899,6 +3347,70 @@ const docTemplate = `{
                 }
             }
         },
+        "payments.InitiatePaymentRequest": {
+            "type": "object",
+            "required": [
+                "amount_minor",
+                "lease_id"
+            ],
+            "properties": {
+                "amount_minor": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "USD"
+                },
+                "lease_id": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string",
+                    "enum": [
+                        "ach",
+                        "card",
+                        "cash",
+                        "check",
+                        "wire",
+                        "other"
+                    ],
+                    "example": "card"
+                }
+            }
+        },
+        "payments.PaymentResponse": {
+            "type": "object",
+            "properties": {
+                "amount_minor": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "external_ref": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lease_id": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "next_action": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "response.Envelope-auth_AuthSessionResponse": {
             "type": "object",
             "properties": {
@@ -2920,6 +3432,14 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/auth.RefreshResponse"
+                }
+            }
+        },
+        "response.Envelope-auth_StatusResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/auth.StatusResponse"
                 }
             }
         },
@@ -2960,6 +3480,14 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/organizations.OrganizationResponse"
+                }
+            }
+        },
+        "response.Envelope-payments_PaymentResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/payments.PaymentResponse"
                 }
             }
         },
@@ -3039,6 +3567,20 @@ const docTemplate = `{
                 "first_name"
             ],
             "properties": {
+                "billing_channel": {
+                    "type": "string",
+                    "enum": [
+                        "email",
+                        "sms"
+                    ],
+                    "example": "email"
+                },
+                "billing_due_day": {
+                    "type": "integer",
+                    "maximum": 31,
+                    "minimum": 1,
+                    "example": 1
+                },
                 "email": {
                     "type": "string",
                     "maxLength": 320,
@@ -3114,6 +3656,18 @@ const docTemplate = `{
         "tenants.PatchTenantRequest": {
             "type": "object",
             "properties": {
+                "billing_channel": {
+                    "type": "string",
+                    "enum": [
+                        "email",
+                        "sms"
+                    ]
+                },
+                "billing_due_day": {
+                    "type": "integer",
+                    "maximum": 31,
+                    "minimum": 1
+                },
                 "email": {
                     "type": "string",
                     "maxLength": 320
@@ -3192,6 +3746,13 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 1
                 },
+                "billing_channel": {
+                    "type": "string",
+                    "example": "email"
+                },
+                "billing_due_day": {
+                    "type": "integer"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -3254,6 +3815,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_by": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 }
             }
@@ -3445,6 +4009,12 @@ const docTemplate = `{
                     "maxLength": 120,
                     "example": "Rivera"
                 },
+                "manager_building_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "password": {
                     "type": "string",
                     "maxLength": 72,
@@ -3462,7 +4032,8 @@ const docTemplate = `{
                         "admin",
                         "landlord",
                         "manager",
-                        "staff"
+                        "staff",
+                        "tenant"
                     ],
                     "example": "staff"
                 },
@@ -3496,6 +4067,12 @@ const docTemplate = `{
                     "maxLength": 120,
                     "example": "Rivera"
                 },
+                "manager_building_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "password": {
                     "type": "string",
                     "maxLength": 72,
@@ -3513,7 +4090,8 @@ const docTemplate = `{
                         "admin",
                         "landlord",
                         "manager",
-                        "staff"
+                        "staff",
+                        "tenant"
                     ],
                     "example": "manager"
                 },
@@ -3575,6 +4153,12 @@ const docTemplate = `{
                 "last_name": {
                     "type": "string",
                     "example": "Rivera"
+                },
+                "manager_building_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "organization_id": {
                     "type": "string",

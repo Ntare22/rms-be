@@ -86,3 +86,57 @@ func (r *Repository) Update(ctx context.Context, organizationID, userID string, 
 		Where("organization_id = ? AND id = ?", strings.TrimSpace(organizationID), strings.TrimSpace(userID)).
 		Updates(updates).Error
 }
+
+// ListManagerBuildingIDs returns all building ids assigned to a manager in an organization.
+func (r *Repository) ListManagerBuildingIDs(ctx context.Context, organizationID, userID string) ([]string, error) {
+	var rows []ManagerBuildingAssignment
+	if err := r.db.WithContext(ctx).
+		Where("organization_id = ? AND user_id = ?", strings.TrimSpace(organizationID), strings.TrimSpace(userID)).
+		Order("created_at ASC").
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(rows))
+	for i := range rows {
+		ids = append(ids, rows[i].BuildingID)
+	}
+	return ids, nil
+}
+
+// ReplaceManagerBuildingAssignments replaces manager scope with the provided building ids.
+func (r *Repository) ReplaceManagerBuildingAssignments(ctx context.Context, organizationID, userID string, buildingIDs []string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.
+			Where("organization_id = ? AND user_id = ?", strings.TrimSpace(organizationID), strings.TrimSpace(userID)).
+			Delete(&ManagerBuildingAssignment{}).Error; err != nil {
+			return err
+		}
+		for _, rawID := range buildingIDs {
+			bid := strings.TrimSpace(rawID)
+			if bid == "" {
+				continue
+			}
+			row := &ManagerBuildingAssignment{
+				OrganizationID: strings.TrimSpace(organizationID),
+				UserID:         strings.TrimSpace(userID),
+				BuildingID:     bid,
+			}
+			if err := tx.Create(row).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// CountBuildingsInOrg counts matched buildings for validation.
+func (r *Repository) CountBuildingsInOrg(ctx context.Context, organizationID string, buildingIDs []string) (int64, error) {
+	if len(buildingIDs) == 0 {
+		return 0, nil
+	}
+	var n int64
+	err := r.db.WithContext(ctx).Table("buildings").
+		Where("organization_id = ? AND id IN ?", strings.TrimSpace(organizationID), buildingIDs).
+		Count(&n).Error
+	return n, err
+}

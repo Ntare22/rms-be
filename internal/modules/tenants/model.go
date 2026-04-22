@@ -29,9 +29,12 @@ type Tenant struct {
 	FullName       string         `gorm:"size:512;not null" json:"full_name"`
 	Email          string         `gorm:"size:320;index" json:"email,omitempty"`
 	Phone          string         `gorm:"size:64" json:"phone,omitempty"`
+	UserID         *string        `gorm:"type:uuid;index" json:"user_id,omitempty"`
 	EmailOptIn     bool           `gorm:"not null;default:false" json:"email_opt_in"`
 	SmsOptIn       bool           `gorm:"not null;default:false" json:"sms_opt_in"`
 	SmsVerified    bool           `gorm:"not null;default:false" json:"sms_verified"`
+	BillingDueDay  *int           `json:"billing_due_day,omitempty"`
+	BillingChannel string         `gorm:"size:16" json:"billing_channel,omitempty"`
 	Locale         string         `gorm:"size:32" json:"locale,omitempty"`
 	Timezone       string         `gorm:"size:64" json:"timezone,omitempty"`
 	Status         TenantStatus   `gorm:"size:24;not null;default:active;index" json:"status"`

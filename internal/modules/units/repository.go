@@ -117,3 +117,22 @@ func (r *Repository) ActiveLeasesByUnitIDs(ctx context.Context, organizationID s
 	}
 	return out, nil
 }
+
+// ListManagerBuildingIDs returns manager-assigned building IDs.
+func (r *Repository) ListManagerBuildingIDs(ctx context.Context, organizationID, userID string) ([]string, error) {
+	type row struct {
+		BuildingID string `gorm:"column:building_id"`
+	}
+	var rows []row
+	if err := r.db.WithContext(ctx).Table("manager_building_assignments").
+		Select("building_id").
+		Where("organization_id = ? AND user_id = ?", strings.TrimSpace(organizationID), strings.TrimSpace(userID)).
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(rows))
+	for i := range rows {
+		out = append(out, rows[i].BuildingID)
+	}
+	return out, nil
+}

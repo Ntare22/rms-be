@@ -19,11 +19,12 @@ const (
 
 // ListFilters holds optional list query parameters.
 type ListFilters struct {
-	Status     *LeaseStatus
-	BuildingID string
-	UnitID     string
-	TenantID   string
-	ActiveOn   *time.Time // calendar day (UTC) — lease active for any instant on this day
+	Status             *LeaseStatus
+	BuildingID         string
+	UnitID             string
+	TenantID           string
+	AllowedBuildingIDs []string
+	ActiveOn           *time.Time // calendar day (UTC) — lease active for any instant on this day
 }
 
 // Repository persists leases and related side effects (unit status, audit).
@@ -69,6 +70,8 @@ func (r *Repository) List(ctx context.Context, organizationID string, f ListFilt
 	}
 	if bid := strings.TrimSpace(f.BuildingID); bid != "" {
 		q = q.Where("unit_id IN (SELECT id FROM units WHERE organization_id = ? AND building_id = ?)", orgID, bid)
+	} else if len(f.AllowedBuildingIDs) > 0 {
+		q = q.Where("unit_id IN (SELECT id FROM units WHERE organization_id = ? AND building_id IN ?)", orgID, f.AllowedBuildingIDs)
 	}
 	if f.ActiveOn != nil {
 		day := time.Date(f.ActiveOn.Year(), f.ActiveOn.Month(), f.ActiveOn.Day(), 0, 0, 0, 0, time.UTC)
@@ -92,6 +95,8 @@ func (r *Repository) List(ctx context.Context, organizationID string, f ListFilt
 	}
 	if bid := strings.TrimSpace(f.BuildingID); bid != "" {
 		tx = tx.Where("unit_id IN (SELECT id FROM units WHERE organization_id = ? AND building_id = ?)", orgID, bid)
+	} else if len(f.AllowedBuildingIDs) > 0 {
+		tx = tx.Where("unit_id IN (SELECT id FROM units WHERE organization_id = ? AND building_id IN ?)", orgID, f.AllowedBuildingIDs)
 	}
 	if f.ActiveOn != nil {
 		day := time.Date(f.ActiveOn.Year(), f.ActiveOn.Month(), f.ActiveOn.Day(), 0, 0, 0, 0, time.UTC)
@@ -182,4 +187,51 @@ func (r *Repository) WriteAuditLog(ctx context.Context, orgID string, actorUserI
 		CreatedAt:      time.Now().UTC(),
 	}
 	return r.db.WithContext(ctx).Create(log).Error
+}
+
+// ListManagerBuildingIDs returns manager-assigned building IDs.
+func (r *Repository) ListManagerBuildingIDs(ctx context.Context, organizationID, userID string) ([]string, error) {
+	type row struct {
+		BuildingID string `gorm:"column:building_id"`
+	}
+	var rows []row
+	if err := r.db.WithContext(ctx).Table("manager_building_assignments").
+		Select("building_id").
+		Where("organization_id = ? AND user_id = ?", strings.TrimSpace(organizationID), strings.TrimSpace(userID)).
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(rows))
+	for i := range rows {
+		out = append(out, rows[i].BuildingID)
+	}
+	return out, nil
+}
+
+// UnitBelongsToBuildings reports whether a unit is in one of the building IDs for org.
+func (r *Repository) UnitBelongsToBuildings(ctx context.Context, organizationID, unitID string, buildingIDs []string) (bool, error) {
+	if len(buildingIDs) == 0 {
+		return false, nil
+	}
+	var n int64
+	err := r.db.WithContext(ctx).Table("units").
+		Where("organization_id = ? AND id = ? AND building_id IN ?", strings.TrimSpace(organizationID), strings.TrimSpace(unitID), buildingIDs).
+		Count(&n).Error
+	return n > 0, err
+}
+
+// TenantIDByUser returns tenant ID linked to a user in an organization.
+func (r *Repository) TenantIDByUser(ctx context.Context, organizationID, userID string) (string, error) {
+	type row struct {
+		ID string `gorm:"column:id"`
+	}
+	var out row
+	if err := r.db.WithContext(ctx).Table("tenants").
+		Select("id").
+		Where("organization_id = ? AND user_id = ?", strings.TrimSpace(organizationID), strings.TrimSpace(userID)).
+		Limit(1).
+		Scan(&out).Error; err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out.ID), nil
 }

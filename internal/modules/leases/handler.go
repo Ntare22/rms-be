@@ -242,3 +242,87 @@ func (h *Handler) End(c *gin.Context) {
 	}
 	response.OK(c, out)
 }
+
+// Approve godoc
+//
+//	@Summary		Approve lease
+//	@Description	Tenant approves a pending lease. Lease transitions to active and unit occupancy is recalculated.
+//	@Tags			leases
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path	string					true	"Organization ID"	Format(uuid)
+//	@Param			leaseId	path	string					true	"Lease ID"		Format(uuid)
+//	@Param			body	body	LeaseDecisionRequest	false	"Optional decision note"
+//	@Success		200		{object}	response.Envelope[LeaseResponse]
+//	@Failure		400		{object}	response.ErrorBody
+//	@Failure		401		{object}	response.ErrorBody
+//	@Failure		403		{object}	response.ErrorBody
+//	@Failure		404		{object}	response.ErrorBody
+//	@Router			/api/v1/organizations/{id}/leases/{leaseId}/approve [post]
+func (h *Handler) Approve(c *gin.Context) {
+	actor, err := actorFromContext(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	var req LeaseDecisionRequest
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			response.Error(c, apierrors.Wrap(err, apierrors.ErrValidation))
+			return
+		}
+	}
+	if err := validator.Struct(&req); err != nil {
+		response.Error(c, err)
+		return
+	}
+	out, err := h.svc.Approve(c.Request.Context(), actor, c.Param("id"), c.Param("leaseId"), &req, c.ClientIP(), c.GetHeader("User-Agent"))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+
+// Reject godoc
+//
+//	@Summary		Reject lease
+//	@Description	Tenant rejects a pending lease. Lease transitions to rejected and occupancy is recalculated.
+//	@Tags			leases
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path	string					true	"Organization ID"	Format(uuid)
+//	@Param			leaseId	path	string					true	"Lease ID"		Format(uuid)
+//	@Param			body	body	LeaseDecisionRequest	false	"Optional decision note"
+//	@Success		200		{object}	response.Envelope[LeaseResponse]
+//	@Failure		400		{object}	response.ErrorBody
+//	@Failure		401		{object}	response.ErrorBody
+//	@Failure		403		{object}	response.ErrorBody
+//	@Failure		404		{object}	response.ErrorBody
+//	@Router			/api/v1/organizations/{id}/leases/{leaseId}/reject [post]
+func (h *Handler) Reject(c *gin.Context) {
+	actor, err := actorFromContext(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	var req LeaseDecisionRequest
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			response.Error(c, apierrors.Wrap(err, apierrors.ErrValidation))
+			return
+		}
+	}
+	if err := validator.Struct(&req); err != nil {
+		response.Error(c, err)
+		return
+	}
+	out, err := h.svc.Reject(c.Request.Context(), actor, c.Param("id"), c.Param("leaseId"), &req, c.ClientIP(), c.GetHeader("User-Agent"))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}

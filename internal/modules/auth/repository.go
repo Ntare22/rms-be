@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -72,4 +73,51 @@ func (r *Repository) GetUserByID(ctx context.Context, userID string) (*users.Use
 		return nil, err
 	}
 	return &u, nil
+}
+
+// GetUserByEmailInOrg returns user by email scoped to organization.
+func (r *Repository) GetUserByEmailInOrg(ctx context.Context, organizationID, email string) (*users.User, error) {
+	var u users.User
+	q := strings.TrimSpace(strings.ToLower(email))
+	if err := r.db.WithContext(ctx).
+		Where("organization_id = ? AND LOWER(email) = ?", strings.TrimSpace(organizationID), q).
+		First(&u).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+// CreateUser inserts an org user.
+func (r *Repository) CreateUser(ctx context.Context, u *users.User) error {
+	return r.db.WithContext(ctx).Create(u).Error
+}
+
+// UpdateUser updates user columns by id and organization.
+func (r *Repository) UpdateUser(ctx context.Context, organizationID, userID string, updates map[string]any) error {
+	return r.db.WithContext(ctx).Model(&users.User{}).
+		Where("organization_id = ? AND id = ?", strings.TrimSpace(organizationID), strings.TrimSpace(userID)).
+		Updates(updates).Error
+}
+
+// CreatePasswordSetupToken inserts a one-time password setup token.
+func (r *Repository) CreatePasswordSetupToken(ctx context.Context, t *PasswordSetupToken) error {
+	return r.db.WithContext(ctx).Create(t).Error
+}
+
+// GetPasswordSetupTokenByHash returns a non-used setup token by hash.
+func (r *Repository) GetPasswordSetupTokenByHash(ctx context.Context, tokenHash string) (*PasswordSetupToken, error) {
+	var t PasswordSetupToken
+	if err := r.db.WithContext(ctx).
+		Where("token_hash = ? AND used_at IS NULL", strings.TrimSpace(tokenHash)).
+		First(&t).Error; err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+// MarkPasswordSetupTokenUsed marks token as consumed.
+func (r *Repository) MarkPasswordSetupTokenUsed(ctx context.Context, tokenID string, usedAt time.Time) error {
+	return r.db.WithContext(ctx).Model(&PasswordSetupToken{}).
+		Where("id = ? AND used_at IS NULL", strings.TrimSpace(tokenID)).
+		Update("used_at", usedAt.UTC()).Error
 }

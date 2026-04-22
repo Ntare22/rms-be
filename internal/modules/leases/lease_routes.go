@@ -8,5 +8,7 @@ func RegisterRoutes(rg *gin.RouterGroup, h *Handler) {
 	rg.POST("", h.Create)
 	rg.GET("/:leaseId", h.Get)
 	rg.PATCH("/:leaseId", h.Patch)
+	rg.POST("/:leaseId/approve", h.Approve)
+	rg.POST("/:leaseId/reject", h.Reject)
 	rg.POST("/:leaseId/end", h.End)
 }

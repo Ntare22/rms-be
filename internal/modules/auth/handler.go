@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 
 	apierrors "rms-be/internal/api/errors"
@@ -20,6 +22,7 @@ func NewHandler(svc *Service) *Handler {
 }
 
 // Register godoc
+//
 //	@Summary		Register organization and first user
 //	@Description	Creates an organization and bootstrap user (intended for controlled use in production).
 //	@Tags			auth
@@ -45,6 +48,7 @@ func (h *Handler) Register(c *gin.Context) {
 }
 
 // Login godoc
+//
 //	@Summary		Login
 //	@Description	Authenticates with email and password within an organization (by id or slug).
 //	@Tags			auth
@@ -70,6 +74,7 @@ func (h *Handler) Login(c *gin.Context) {
 }
 
 // Refresh godoc
+//
 //	@Summary		Refresh tokens
 //	@Description	Exchanges a refresh token for a new access and refresh token pair (rotation).
 //	@Tags			auth
@@ -94,7 +99,71 @@ func (h *Handler) Refresh(c *gin.Context) {
 	response.OK(c, out)
 }
 
+// PasswordSetupRequest godoc
+//
+//	@Summary		Send password setup invite
+//	@Description	Creates a one-time password setup token and sends invite email for an existing organization user.
+//	@Tags			auth
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		PasswordSetupRequest	true	"Password setup request payload"
+//	@Success		200		{object}	response.Envelope[StatusResponse]
+//	@Failure		400		{object}	response.ErrorBody
+//	@Failure		401		{object}	response.ErrorBody
+//	@Failure		403		{object}	response.ErrorBody
+//	@Failure		500		{object}	response.ErrorBody
+//	@Router			/api/v1/auth/password/setup/request [post]
+func (h *Handler) PasswordSetupRequest(c *gin.Context) {
+	cl, ok := middleware.ClaimsFromContext(c)
+	if !ok || cl == nil {
+		response.Error(c, apierrors.ErrUnauthorized)
+		return
+	}
+	var req PasswordSetupRequest
+	if err := validator.BindJSON(c, &req); err != nil {
+		response.Error(c, err)
+		return
+	}
+	if !strings.EqualFold(cl.Role, middleware.RoleAdmin) && !strings.EqualFold(cl.OrganizationID, req.OrganizationID) {
+		response.Error(c, apierrors.ErrForbidden)
+		return
+	}
+	if err := h.svc.StartPasswordSetup(c.Request.Context(), &req); err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, gin.H{"status": "accepted"})
+}
+
+// PasswordSetupConfirm godoc
+//
+//	@Summary		Confirm password setup
+//	@Description	Consumes one-time setup token and sets a new password for the invited account.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		PasswordSetupConfirmRequest	true	"Password setup confirmation payload"
+//	@Success		200		{object}	response.Envelope[StatusResponse]
+//	@Failure		400		{object}	response.ErrorBody
+//	@Failure		401		{object}	response.ErrorBody
+//	@Failure		500		{object}	response.ErrorBody
+//	@Router			/api/v1/auth/password/setup/confirm [post]
+func (h *Handler) PasswordSetupConfirm(c *gin.Context) {
+	var req PasswordSetupConfirmRequest
+	if err := validator.BindJSON(c, &req); err != nil {
+		response.Error(c, err)
+		return
+	}
+	if err := h.svc.ConfirmPasswordSetup(c.Request.Context(), &req); err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, gin.H{"status": "ok"})
+}
+
 // Me godoc
+//
 //	@Summary		Current user
 //	@Description	Returns the authenticated user profile and claim context.
 //	@Tags			auth

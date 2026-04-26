@@ -304,11 +304,7 @@ func (s *Service) SendReminders(ctx context.Context, actor Actor, organizationID
 	}, nil
 }
 
-func (s *Service) RegisterPesapalIPN(ctx context.Context, actor Actor, organizationID string, req *RegisterPesapalIPNRequest) (*PesapalIPNResponse, error) {
-	organizationID = strings.TrimSpace(organizationID)
-	if err := assertOrgScope(actor, organizationID); err != nil {
-		return nil, err
-	}
+func (s *Service) RegisterPesapalIPN(ctx context.Context, actor Actor, req *RegisterPesapalIPNRequest) (*PesapalIPNResponse, error) {
 	if !canMutatePayments(actor.Role) {
 		return nil, apierrors.ErrForbidden
 	}
@@ -340,11 +336,7 @@ func (s *Service) RegisterPesapalIPN(ctx context.Context, actor Actor, organizat
 	}, nil
 }
 
-func (s *Service) ListPesapalIPN(ctx context.Context, actor Actor, organizationID string) (*PesapalIPNListResponse, error) {
-	organizationID = strings.TrimSpace(organizationID)
-	if err := assertOrgScope(actor, organizationID); err != nil {
-		return nil, err
-	}
+func (s *Service) ListPesapalIPN(ctx context.Context, actor Actor) (*PesapalIPNListResponse, error) {
 	if !canReadPayments(actor.Role) {
 		return nil, apierrors.ErrForbidden
 	}
@@ -385,11 +377,7 @@ func (s *Service) HandlePesapalIPN(ctx context.Context, req *PesapalIPNCallbackR
 	return &PesapalIPNCallbackResponse{Status: "accepted"}, nil
 }
 
-func (s *Service) GetTransactionStatus(ctx context.Context, actor Actor, organizationID, orderTrackingID string) (*PesapalTransactionStatusResponse, error) {
-	organizationID = strings.TrimSpace(organizationID)
-	if err := assertOrgScope(actor, organizationID); err != nil {
-		return nil, err
-	}
+func (s *Service) GetTransactionStatus(ctx context.Context, actor Actor, orderTrackingID string) (*PesapalTransactionStatusResponse, error) {
 	if !canReadPayments(actor.Role) {
 		return nil, apierrors.ErrForbidden
 	}

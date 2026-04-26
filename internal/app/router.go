@@ -104,7 +104,8 @@ func NewRouter(deps *Dependencies) *gin.Engine {
 	units.RegisterRoutes(orgTree.Group("/buildings/:buildingId/units"), deps.Units)
 	tenants.RegisterRoutes(orgTree.Group("/tenants"), deps.Tenants)
 	leases.RegisterRoutes(orgTree.Group("/leases"), deps.Leases)
-	payments.RegisterRoutes(orgTree.Group("/payments"), deps.Payments)
+	payments.RegisterOrgRoutes(orgTree.Group("/payments"), deps.Payments)
+	payments.RegisterIntegrationRoutes(protected.Group("/payments"), deps.Payments)
 
 	admin := protected.Group("/admin")
 	admin.Use(middleware.RequireRoles(middleware.RoleAdmin))

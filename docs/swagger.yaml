@@ -3272,86 +3272,6 @@ paths:
       summary: Payments method split
       tags:
       - payments
-  /api/v1/organizations/{id}/payments/pesapal/ipn/list:
-    get:
-      description: Lists registered IPN URLs for the current merchant account.
-      parameters:
-      - description: Organization ID
-        format: uuid
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.Envelope-payments_PesapalIPNListResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-      security:
-      - BearerAuth: []
-      summary: List Pesapal IPNs
-      tags:
-      - payments
-  /api/v1/organizations/{id}/payments/pesapal/ipn/register:
-    post:
-      consumes:
-      - application/json
-      description: Registers merchant IPN URL in Pesapal and returns the generated
-        IPN ID.
-      parameters:
-      - description: Organization ID
-        format: uuid
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Optional URL/type override
-        in: body
-        name: body
-        schema:
-          $ref: '#/definitions/payments.RegisterPesapalIPNRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.Envelope-payments_PesapalIPNResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-      security:
-      - BearerAuth: []
-      summary: Register Pesapal IPN
-      tags:
-      - payments
   /api/v1/organizations/{id}/payments/reminders/candidates:
     get:
       description: Lists upcoming/overdue unpaid charge candidates for reminder workflows.
@@ -3506,50 +3426,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Payments summary
-      tags:
-      - payments
-  /api/v1/organizations/{id}/payments/transaction-status:
-    get:
-      description: Queries Pesapal GetTransactionStatus by order tracking ID and syncs
-        local payment status.
-      parameters:
-      - description: Organization ID
-        format: uuid
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Pesapal order tracking ID
-        in: query
-        name: order_tracking_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.Envelope-payments_PesapalTransactionStatusResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/response.ErrorBody'
-      security:
-      - BearerAuth: []
-      summary: Check Pesapal transaction status
       tags:
       - payments
   /api/v1/organizations/{id}/tenants:
@@ -4028,6 +3904,111 @@ paths:
           schema:
             $ref: '#/definitions/response.Envelope-payments_PesapalIPNCallbackResponse'
       summary: Pesapal IPN callback
+      tags:
+      - payments
+  /api/v1/payments/pesapal/ipn/list:
+    get:
+      description: Lists registered IPN URLs for the current merchant account.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_PesapalIPNListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: List Pesapal IPNs
+      tags:
+      - payments
+  /api/v1/payments/pesapal/ipn/register:
+    post:
+      consumes:
+      - application/json
+      description: Registers merchant IPN URL in Pesapal and returns the generated
+        IPN ID.
+      parameters:
+      - description: Optional URL/type override
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/payments.RegisterPesapalIPNRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_PesapalIPNResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Register Pesapal IPN
+      tags:
+      - payments
+  /api/v1/payments/transaction-status:
+    get:
+      description: Queries Pesapal GetTransactionStatus by order tracking ID and syncs
+        local payment status.
+      parameters:
+      - description: Pesapal order tracking ID
+        in: query
+        name: order_tracking_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_PesapalTransactionStatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Check Pesapal transaction status
       tags:
       - payments
 securityDefinitions:

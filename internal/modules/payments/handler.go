@@ -233,14 +233,13 @@ func (h *Handler) SendReminders(c *gin.Context) {
 //	@Security		BearerAuth
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path	string						true	"Organization ID"	Format(uuid)
 //	@Param			body	body	RegisterPesapalIPNRequest	false	"Optional URL/type override"
 //	@Success		200		{object}	response.Envelope[PesapalIPNResponse]
 //	@Failure		400		{object}	response.ErrorBody
 //	@Failure		401		{object}	response.ErrorBody
 //	@Failure		403		{object}	response.ErrorBody
 //	@Failure		500		{object}	response.ErrorBody
-//	@Router			/api/v1/organizations/{id}/payments/pesapal/ipn/register [post]
+//	@Router			/api/v1/payments/pesapal/ipn/register [post]
 func (h *Handler) RegisterPesapalIPN(c *gin.Context) {
 	actor, err := actorFromContext(c)
 	if err != nil {
@@ -254,7 +253,7 @@ func (h *Handler) RegisterPesapalIPN(c *gin.Context) {
 			return
 		}
 	}
-	out, err := h.svc.RegisterPesapalIPN(c.Request.Context(), actor, c.Param("id"), &req)
+	out, err := h.svc.RegisterPesapalIPN(c.Request.Context(), actor, &req)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -269,19 +268,18 @@ func (h *Handler) RegisterPesapalIPN(c *gin.Context) {
 //	@Tags			payments
 //	@Security		BearerAuth
 //	@Produce		json
-//	@Param			id	path	string	true	"Organization ID"	Format(uuid)
 //	@Success		200	{object}	response.Envelope[PesapalIPNListResponse]
 //	@Failure		401	{object}	response.ErrorBody
 //	@Failure		403	{object}	response.ErrorBody
 //	@Failure		500	{object}	response.ErrorBody
-//	@Router			/api/v1/organizations/{id}/payments/pesapal/ipn/list [get]
+//	@Router			/api/v1/payments/pesapal/ipn/list [get]
 func (h *Handler) ListPesapalIPN(c *gin.Context) {
 	actor, err := actorFromContext(c)
 	if err != nil {
 		response.Error(c, err)
 		return
 	}
-	out, err := h.svc.ListPesapalIPN(c.Request.Context(), actor, c.Param("id"))
+	out, err := h.svc.ListPesapalIPN(c.Request.Context(), actor)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -333,14 +331,13 @@ func (h *Handler) PesapalIPNCallback(c *gin.Context) {
 //	@Tags			payments
 //	@Security		BearerAuth
 //	@Produce		json
-//	@Param			id					path	string	true	"Organization ID"	Format(uuid)
 //	@Param			order_tracking_id	query	string	true	"Pesapal order tracking ID"
 //	@Success		200					{object}	response.Envelope[PesapalTransactionStatusResponse]
 //	@Failure		400					{object}	response.ErrorBody
 //	@Failure		401					{object}	response.ErrorBody
 //	@Failure		403					{object}	response.ErrorBody
 //	@Failure		500					{object}	response.ErrorBody
-//	@Router			/api/v1/organizations/{id}/payments/transaction-status [get]
+//	@Router			/api/v1/payments/transaction-status [get]
 func (h *Handler) GetTransactionStatus(c *gin.Context) {
 	actor, err := actorFromContext(c)
 	if err != nil {
@@ -352,7 +349,7 @@ func (h *Handler) GetTransactionStatus(c *gin.Context) {
 		response.Error(c, err)
 		return
 	}
-	out, err := h.svc.GetTransactionStatus(c.Request.Context(), actor, c.Param("id"), q.OrderTrackingID)
+	out, err := h.svc.GetTransactionStatus(c.Request.Context(), actor, q.OrderTrackingID)
 	if err != nil {
 		response.Error(c, err)
 		return

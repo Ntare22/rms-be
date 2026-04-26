@@ -13,12 +13,12 @@ type Config struct {
 	AppEnv string
 	Port   int
 
-	DatabaseURL string
-	AppBaseURL  string
-	CORSAllowedOrigins  []string
-	CORSAllowedMethods  []string
-	CORSAllowedHeaders  []string
-	CORSExposeHeaders   []string
+	DatabaseURL          string
+	AppBaseURL           string
+	CORSAllowedOrigins   []string
+	CORSAllowedMethods   []string
+	CORSAllowedHeaders   []string
+	CORSExposeHeaders    []string
 	CORSAllowCredentials bool
 	CORSMaxAge           time.Duration
 
@@ -41,6 +41,12 @@ type Config struct {
 	MailjetFromEmail                 string
 	MailjetTemplateInviteID          int64
 	MailjetTemplateBillingReminderID int64
+
+	PesaPalBaseURL        string
+	PesaPalConsumerKey    string
+	PesaPalConsumerSecret string
+	PesaPalIPNID          string
+	PesaPalTimeout        time.Duration
 
 	SMSProvider string
 	SMSAPIKey   string
@@ -100,6 +106,10 @@ func Load() (*Config, error) {
 	if err != nil || corsMaxAgeSec < 0 {
 		return nil, fmt.Errorf("invalid CORS_MAX_AGE_SECONDS")
 	}
+	pesapalTimeoutSec, err := strconv.Atoi(getEnv("PESAPAL_TIMEOUT_SECONDS", "10"))
+	if err != nil || pesapalTimeoutSec <= 0 {
+		return nil, fmt.Errorf("invalid PESAPAL_TIMEOUT_SECONDS")
+	}
 	inviteTemplateID, err := parseInt64Env("MAILJET_TEMPLATE_INVITE_ID", 0)
 	if err != nil {
 		return nil, fmt.Errorf("invalid MAILJET_TEMPLATE_INVITE_ID: %w", err)
@@ -137,6 +147,11 @@ func Load() (*Config, error) {
 		MailjetFromEmail:                 getEnv("MAILJET_FROM_EMAIL", ""),
 		MailjetTemplateInviteID:          inviteTemplateID,
 		MailjetTemplateBillingReminderID: billingTemplateID,
+		PesaPalBaseURL:                   getEnv("PESAPAL_BASE_URL", ""),
+		PesaPalConsumerKey:               getEnv("PESAPAL_CONSUMER_KEY", ""),
+		PesaPalConsumerSecret:            getEnv("PESAPAL_CONSUMER_SECRET", ""),
+		PesaPalIPNID:                     getEnv("PESAPAL_IPN_ID", ""),
+		PesaPalTimeout:                   time.Duration(pesapalTimeoutSec) * time.Second,
 		SMSProvider:                      getEnv("SMS_PROVIDER", ""),
 		SMSAPIKey:                        getEnv("SMS_API_KEY", ""),
 		InternalJobSecret:                strings.TrimSpace(os.Getenv("INTERNAL_JOB_SECRET")),

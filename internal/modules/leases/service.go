@@ -416,6 +416,330 @@ func (s *Service) Reject(ctx context.Context, actor Actor, organizationID, lease
 	return &r, nil
 }
 
+func (s *Service) History(ctx context.Context, actor Actor, organizationID, leaseID string) (*LeaseHistoryResponse, error) {
+	if err := assertOrgScope(actor, strings.TrimSpace(organizationID)); err != nil {
+		return nil, err
+	}
+	if !canReadLeases(actor.Role) {
+		return nil, apierrors.ErrForbidden
+	}
+	cur, err := s.repo.GetByIDInOrg(ctx, organizationID, leaseID)
+	if err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apierrors.ErrNotFound
+		}
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if isManagerRole(actor.Role) {
+		ok, err := s.managerCanAccessUnit(ctx, organizationID, actor.UserID, cur.UnitID)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, apierrors.ErrForbidden
+		}
+	}
+	if isTenantRole(actor.Role) {
+		tid, err := s.repo.TenantIDByUser(ctx, organizationID, actor.UserID)
+		if err != nil {
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+		if !strings.EqualFold(strings.TrimSpace(tid), strings.TrimSpace(cur.TenantID)) {
+			return nil, apierrors.ErrForbidden
+		}
+	}
+	rows, err := s.repo.ListHistoryForTenantAndUnit(ctx, organizationID, cur.TenantID, cur.UnitID)
+	if err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	out := make([]LeaseResponse, 0, len(rows))
+	for i := range rows {
+		r := toResponse(&rows[i])
+		out = append(out, r)
+	}
+	return &LeaseHistoryResponse{Items: out}, nil
+}
+
+func (s *Service) CreateRenewalOffer(ctx context.Context, actor Actor, organizationID, leaseID string, req *LeaseRenewalCreateRequest, ip, userAgent string) (*LeaseRenewalOfferResponse, error) {
+	if err := assertOrgScope(actor, strings.TrimSpace(organizationID)); err != nil {
+		return nil, err
+	}
+	if !canMutateLeases(actor.Role) {
+		return nil, apierrors.ErrForbidden
+	}
+	l, err := s.repo.GetByIDInOrg(ctx, organizationID, leaseID)
+	if err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apierrors.ErrNotFound
+		}
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if isManagerRole(actor.Role) {
+		ok, err := s.managerCanAccessUnit(ctx, organizationID, actor.UserID, l.UnitID)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, apierrors.ErrForbidden
+		}
+	}
+	cur := strings.ToUpper(strings.TrimSpace(req.Currency))
+	if cur == "" {
+		cur = l.Currency
+	}
+	row := &LeaseRenewalOffer{
+		OrganizationID:         strings.TrimSpace(organizationID),
+		LeaseID:                strings.TrimSpace(leaseID),
+		StartDate:              req.StartDate,
+		EndDate:                req.EndDate,
+		MonthlyRentAmountMinor: req.MonthlyRentAmountMinor,
+		Currency:               cur,
+		Status:                 "offered",
+	}
+	if strings.TrimSpace(actor.UserID) != "" {
+		row.CreatedBy = &actor.UserID
+		row.UpdatedBy = &actor.UserID
+	}
+	if err := s.repo.CreateRenewalOffer(ctx, row); err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	_ = s.repo.WriteAuditLog(ctx, organizationID, ptrOrNil(strings.TrimSpace(actor.UserID)), "lease.renewal_offer_created", leaseID, map[string]any{
+		"offer_id": row.ID,
+	}, ip, userAgent)
+	resp := toRenewalOfferResponse(row)
+	return &resp, nil
+}
+
+func (s *Service) AcceptRenewalOffer(ctx context.Context, actor Actor, organizationID, leaseID, offerID string, req *LeaseRenewalDecisionRequest, ip, userAgent string) (*LeaseRenewalOfferResponse, error) {
+	if err := assertOrgScope(actor, strings.TrimSpace(organizationID)); err != nil {
+		return nil, err
+	}
+	if !isTenantRole(actor.Role) {
+		return nil, apierrors.ErrForbidden
+	}
+	l, err := s.repo.GetByIDInOrg(ctx, organizationID, leaseID)
+	if err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apierrors.ErrNotFound
+		}
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	tid, err := s.repo.TenantIDByUser(ctx, organizationID, actor.UserID)
+	if err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if !strings.EqualFold(strings.TrimSpace(tid), strings.TrimSpace(l.TenantID)) {
+		return nil, apierrors.ErrForbidden
+	}
+	offer, err := s.repo.GetRenewalOffer(ctx, organizationID, leaseID, offerID)
+	if err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apierrors.ErrNotFound
+		}
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if strings.TrimSpace(offer.Status) != "offered" {
+		return nil, apierrors.ErrValidation
+	}
+	now := time.Now().UTC()
+	if err := s.repo.UpdateRenewalOffer(ctx, organizationID, leaseID, offerID, map[string]any{
+		"status":        "accepted",
+		"decision_note": strings.TrimSpace(req.Note),
+		"decided_at":    now,
+	}); err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	updates := map[string]any{"status": LeaseStatusEnded, "updated_by": actor.UserID}
+	if offer.StartDate.After(l.StartDate) {
+		endDate := offer.StartDate.Add(-time.Second)
+		updates["end_date"] = endDate
+	}
+	_ = s.repo.Update(ctx, organizationID, leaseID, updates)
+	newLease := &Lease{
+		OrganizationID:         strings.TrimSpace(organizationID),
+		UnitID:                 l.UnitID,
+		TenantID:               l.TenantID,
+		StartDate:              offer.StartDate,
+		EndDate:                offer.EndDate,
+		MonthlyRentAmountMinor: offer.MonthlyRentAmountMinor,
+		Currency:               offer.Currency,
+		Status:                 LeaseStatusActive,
+		IsPrimary:              true,
+		CreatedBy:              ptrOrNil(strings.TrimSpace(actor.UserID)),
+		UpdatedBy:              ptrOrNil(strings.TrimSpace(actor.UserID)),
+	}
+	if err := s.repo.Create(ctx, newLease); err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if err := s.syncUnitOccupancy(ctx, organizationID, l.UnitID); err != nil {
+		return nil, err
+	}
+	_ = s.repo.WriteAuditLog(ctx, organizationID, ptrOrNil(strings.TrimSpace(actor.UserID)), "lease.renewal_offer_accepted", leaseID, map[string]any{
+		"offer_id":     offerID,
+		"new_lease_id": newLease.ID,
+	}, ip, userAgent)
+	refreshed, _ := s.repo.GetRenewalOffer(ctx, organizationID, leaseID, offerID)
+	if refreshed == nil {
+		refreshed = offer
+		refreshed.Status = "accepted"
+		refreshed.DecidedAt = &now
+		refreshed.DecisionNote = strings.TrimSpace(req.Note)
+	}
+	resp := toRenewalOfferResponse(refreshed)
+	return &resp, nil
+}
+
+func (s *Service) RejectRenewalOffer(ctx context.Context, actor Actor, organizationID, leaseID, offerID string, req *LeaseRenewalDecisionRequest, ip, userAgent string) (*LeaseRenewalOfferResponse, error) {
+	if err := assertOrgScope(actor, strings.TrimSpace(organizationID)); err != nil {
+		return nil, err
+	}
+	if !isTenantRole(actor.Role) {
+		return nil, apierrors.ErrForbidden
+	}
+	l, err := s.repo.GetByIDInOrg(ctx, organizationID, leaseID)
+	if err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apierrors.ErrNotFound
+		}
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	tid, err := s.repo.TenantIDByUser(ctx, organizationID, actor.UserID)
+	if err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if !strings.EqualFold(strings.TrimSpace(tid), strings.TrimSpace(l.TenantID)) {
+		return nil, apierrors.ErrForbidden
+	}
+	offer, err := s.repo.GetRenewalOffer(ctx, organizationID, leaseID, offerID)
+	if err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apierrors.ErrNotFound
+		}
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	now := time.Now().UTC()
+	if err := s.repo.UpdateRenewalOffer(ctx, organizationID, leaseID, offerID, map[string]any{
+		"status":        "rejected",
+		"decision_note": strings.TrimSpace(req.Note),
+		"decided_at":    now,
+	}); err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	_ = s.repo.WriteAuditLog(ctx, organizationID, ptrOrNil(strings.TrimSpace(actor.UserID)), "lease.renewal_offer_rejected", leaseID, map[string]any{
+		"offer_id": offerID,
+	}, ip, userAgent)
+	refreshed, _ := s.repo.GetRenewalOffer(ctx, organizationID, leaseID, offerID)
+	if refreshed == nil {
+		refreshed = offer
+		refreshed.Status = "rejected"
+		refreshed.DecidedAt = &now
+		refreshed.DecisionNote = strings.TrimSpace(req.Note)
+	}
+	resp := toRenewalOfferResponse(refreshed)
+	return &resp, nil
+}
+
+func (s *Service) Closeout(ctx context.Context, actor Actor, organizationID, leaseID string, req *LeaseCloseoutRequest, ip, userAgent string) (*LeaseCloseoutResponse, error) {
+	if err := assertOrgScope(actor, strings.TrimSpace(organizationID)); err != nil {
+		return nil, err
+	}
+	if !canMutateLeases(actor.Role) {
+		return nil, apierrors.ErrForbidden
+	}
+	l, err := s.repo.GetByIDInOrg(ctx, organizationID, leaseID)
+	if err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apierrors.ErrNotFound
+		}
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if isManagerRole(actor.Role) {
+		ok, err := s.managerCanAccessUnit(ctx, organizationID, actor.UserID, l.UnitID)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, apierrors.ErrForbidden
+		}
+	}
+	cur := strings.ToUpper(strings.TrimSpace(req.Currency))
+	if cur == "" {
+		cur = l.Currency
+	}
+	row := &LeaseCloseout{
+		OrganizationID:       strings.TrimSpace(organizationID),
+		LeaseID:              strings.TrimSpace(leaseID),
+		MoveOutDate:          req.MoveOutDate,
+		FinalSettlementMinor: req.FinalSettlementMinor,
+		Currency:             cur,
+		Notes:                strings.TrimSpace(req.Notes),
+		CreatedBy:            ptrOrNil(strings.TrimSpace(actor.UserID)),
+		UpdatedBy:            ptrOrNil(strings.TrimSpace(actor.UserID)),
+	}
+	if err := s.repo.CreateCloseout(ctx, row); err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if err := s.repo.Update(ctx, organizationID, leaseID, map[string]any{
+		"status":     LeaseStatusEnded,
+		"end_date":   req.MoveOutDate,
+		"updated_by": actor.UserID,
+	}); err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if err := s.syncUnitOccupancy(ctx, organizationID, l.UnitID); err != nil {
+		return nil, err
+	}
+	_ = s.repo.WriteAuditLog(ctx, organizationID, ptrOrNil(strings.TrimSpace(actor.UserID)), "lease.closeout_created", leaseID, map[string]any{
+		"closeout_id": row.ID,
+	}, ip, userAgent)
+	resp := LeaseCloseoutResponse{
+		ID:                   row.ID,
+		LeaseID:              row.LeaseID,
+		MoveOutDate:          row.MoveOutDate,
+		FinalSettlementMinor: row.FinalSettlementMinor,
+		Currency:             row.Currency,
+		Notes:                row.Notes,
+		CreatedAt:            row.CreatedAt,
+	}
+	return &resp, nil
+}
+
+func (s *Service) TenantStatement(ctx context.Context, actor Actor, organizationID, tenantID string) (*TenantStatementResponse, error) {
+	if err := assertOrgScope(actor, strings.TrimSpace(organizationID)); err != nil {
+		return nil, err
+	}
+	if !canReadLeases(actor.Role) {
+		return nil, apierrors.ErrForbidden
+	}
+	if isTenantRole(actor.Role) {
+		myTenantID, err := s.repo.TenantIDByUser(ctx, organizationID, actor.UserID)
+		if err != nil {
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+		if !strings.EqualFold(strings.TrimSpace(myTenantID), strings.TrimSpace(tenantID)) {
+			return nil, apierrors.ErrForbidden
+		}
+	}
+	rows, err := s.repo.StatementRows(ctx, organizationID, tenantID)
+	if err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	resp := &TenantStatementResponse{
+		TenantID: strings.TrimSpace(tenantID),
+		Items:    rows,
+	}
+	for i := range rows {
+		if rows[i].Kind == "charge" {
+			resp.TotalChargesMinor += rows[i].AmountMinor
+		}
+		if rows[i].Kind == "payment" {
+			resp.TotalPaymentsMinor += rows[i].AmountMinor
+		}
+	}
+	resp.OutstandingMinor = resp.TotalChargesMinor - resp.TotalPaymentsMinor
+	return resp, nil
+}
+
 func (s *Service) assertNoPrimaryActiveOverlap(ctx context.Context, organizationID, unitID, excludeLeaseID string, start time.Time, end *time.Time, status LeaseStatus, isPrimary bool) error {
 	if status != LeaseStatusActive || !isPrimary {
 		return nil
@@ -550,7 +874,7 @@ func assertOrgScope(actor Actor, organizationID string) error {
 func canReadLeases(role string) bool {
 	r := strings.TrimSpace(strings.ToLower(role))
 	switch r {
-	case middleware.RoleAdmin, middleware.RoleLandlord, middleware.RoleManager, string(users.UserRoleStaff), string(users.UserRoleTenant):
+	case middleware.RoleAdmin, middleware.RoleLandlord, middleware.RoleManager, middleware.RolePropertyManager, middleware.RoleAccountant, string(users.UserRoleStaff), string(users.UserRoleTenant):
 		return true
 	default:
 		return false
@@ -560,7 +884,7 @@ func canReadLeases(role string) bool {
 func canMutateLeases(role string) bool {
 	r := strings.TrimSpace(strings.ToLower(role))
 	switch r {
-	case middleware.RoleAdmin, middleware.RoleLandlord, middleware.RoleManager:
+	case middleware.RoleAdmin, middleware.RoleLandlord, middleware.RoleManager, middleware.RolePropertyManager:
 		return true
 	default:
 		return false
@@ -600,8 +924,24 @@ func toResponse(l *Lease) LeaseResponse {
 	}
 }
 
+func toRenewalOfferResponse(r *LeaseRenewalOffer) LeaseRenewalOfferResponse {
+	return LeaseRenewalOfferResponse{
+		ID:                     r.ID,
+		LeaseID:                r.LeaseID,
+		StartDate:              r.StartDate,
+		EndDate:                r.EndDate,
+		MonthlyRentAmountMinor: r.MonthlyRentAmountMinor,
+		Currency:               r.Currency,
+		Status:                 r.Status,
+		DecisionNote:           r.DecisionNote,
+		DecidedAt:              r.DecidedAt,
+		CreatedAt:              r.CreatedAt,
+	}
+}
+
 func isManagerRole(role string) bool {
-	return strings.EqualFold(strings.TrimSpace(role), middleware.RoleManager)
+	r := strings.TrimSpace(role)
+	return strings.EqualFold(r, middleware.RoleManager) || strings.EqualFold(r, middleware.RolePropertyManager)
 }
 
 func isTenantRole(role string) bool {

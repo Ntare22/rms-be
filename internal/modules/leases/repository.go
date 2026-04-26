@@ -235,3 +235,81 @@ func (r *Repository) TenantIDByUser(ctx context.Context, organizationID, userID 
 	}
 	return strings.TrimSpace(out.ID), nil
 }
+
+func (r *Repository) ListHistoryForTenantAndUnit(ctx context.Context, organizationID, tenantID, unitID string) ([]Lease, error) {
+	var rows []Lease
+	err := r.db.WithContext(ctx).
+		Where("organization_id = ? AND tenant_id = ? AND unit_id = ?", strings.TrimSpace(organizationID), strings.TrimSpace(tenantID), strings.TrimSpace(unitID)).
+		Order("start_date DESC, created_at DESC").
+		Find(&rows).Error
+	return rows, err
+}
+
+func (r *Repository) CreateRenewalOffer(ctx context.Context, row *LeaseRenewalOffer) error {
+	return r.db.WithContext(ctx).Create(row).Error
+}
+
+func (r *Repository) GetRenewalOffer(ctx context.Context, organizationID, leaseID, offerID string) (*LeaseRenewalOffer, error) {
+	var row LeaseRenewalOffer
+	err := r.db.WithContext(ctx).
+		Where("organization_id = ? AND lease_id = ? AND id = ?", strings.TrimSpace(organizationID), strings.TrimSpace(leaseID), strings.TrimSpace(offerID)).
+		First(&row).Error
+	if err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
+func (r *Repository) UpdateRenewalOffer(ctx context.Context, organizationID, leaseID, offerID string, updates map[string]any) error {
+	return r.db.WithContext(ctx).Model(&LeaseRenewalOffer{}).
+		Where("organization_id = ? AND lease_id = ? AND id = ?", strings.TrimSpace(organizationID), strings.TrimSpace(leaseID), strings.TrimSpace(offerID)).
+		Updates(updates).Error
+}
+
+func (r *Repository) CreateCloseout(ctx context.Context, row *LeaseCloseout) error {
+	return r.db.WithContext(ctx).Create(row).Error
+}
+
+func (r *Repository) StatementRows(ctx context.Context, organizationID, tenantID string) ([]TenantStatementEntry, error) {
+	type row struct {
+		Kind        string    `gorm:"column:kind"`
+		ReferenceID string    `gorm:"column:reference_id"`
+		AmountMinor int64     `gorm:"column:amount_minor"`
+		Currency    string    `gorm:"column:currency"`
+		OccurredAt  time.Time `gorm:"column:occurred_at"`
+		Description string    `gorm:"column:description"`
+	}
+	var rows []row
+	err := r.db.WithContext(ctx).Raw(`
+SELECT * FROM (
+  SELECT 'charge' as kind,
+         c.id as reference_id,
+         c.amount_minor as amount_minor,
+         COALESCE(NULLIF(TRIM(l.currency), ''), 'USD') as currency,
+         c.due_at as occurred_at,
+         COALESCE(NULLIF(TRIM(c.description), ''), 'rent charge') as description
+  FROM rent_charges c
+  JOIN leases l ON l.id = c.lease_id AND l.organization_id = c.organization_id
+  WHERE c.organization_id = ? AND l.tenant_id = ?
+  UNION ALL
+  SELECT 'payment' as kind,
+         p.id as reference_id,
+         p.amount_minor as amount_minor,
+         COALESCE(NULLIF(TRIM(p.currency), ''), 'USD') as currency,
+         p.received_at as occurred_at,
+         COALESCE(NULLIF(TRIM(p.external_ref), ''), 'payment') as description
+  FROM payments p
+  JOIN leases l ON l.id = p.lease_id AND l.organization_id = p.organization_id
+  WHERE p.organization_id = ? AND l.tenant_id = ?
+) x
+ORDER BY occurred_at ASC
+`, strings.TrimSpace(organizationID), strings.TrimSpace(tenantID), strings.TrimSpace(organizationID), strings.TrimSpace(tenantID)).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]TenantStatementEntry, 0, len(rows))
+	for i := range rows {
+		out = append(out, TenantStatementEntry(rows[i]))
+	}
+	return out, nil
+}

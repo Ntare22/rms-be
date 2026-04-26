@@ -11,9 +11,11 @@ import (
 
 // Well-known application roles for RBAC middleware.
 const (
-	RoleAdmin    = "admin"
-	RoleLandlord = "landlord"
-	RoleManager  = "manager"
+	RoleAdmin           = "admin"
+	RoleLandlord        = "landlord"
+	RoleManager         = "manager"
+	RolePropertyManager = "property_manager"
+	RoleAccountant      = "accountant"
 )
 
 // RequireRoles enforces that the authenticated user has one of the allowed roles.

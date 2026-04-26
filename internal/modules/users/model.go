@@ -10,11 +10,13 @@ import (
 type UserRole string
 
 const (
-	UserRoleAdmin    UserRole = "admin"
-	UserRoleLandlord UserRole = "landlord"
-	UserRoleManager  UserRole = "manager"
-	UserRoleStaff    UserRole = "staff"
-	UserRoleTenant   UserRole = "tenant"
+	UserRoleAdmin           UserRole = "admin"
+	UserRoleLandlord        UserRole = "landlord"
+	UserRoleManager         UserRole = "manager"
+	UserRolePropertyManager UserRole = "property_manager"
+	UserRoleAccountant      UserRole = "accountant"
+	UserRoleStaff           UserRole = "staff"
+	UserRoleTenant          UserRole = "tenant"
 )
 
 // UserStatus controls login and lifecycle for org users.

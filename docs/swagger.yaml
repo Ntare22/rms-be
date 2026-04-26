@@ -350,11 +350,49 @@ definitions:
         maxLength: 2000
         type: string
     type: object
+  leases.LeaseCloseoutRequest:
+    properties:
+      currency:
+        type: string
+      final_settlement_minor:
+        type: integer
+      move_out_date:
+        type: string
+      notes:
+        maxLength: 4000
+        type: string
+    required:
+    - move_out_date
+    type: object
+  leases.LeaseCloseoutResponse:
+    properties:
+      created_at:
+        type: string
+      currency:
+        type: string
+      final_settlement_minor:
+        type: integer
+      id:
+        type: string
+      lease_id:
+        type: string
+      move_out_date:
+        type: string
+      notes:
+        type: string
+    type: object
   leases.LeaseDecisionRequest:
     properties:
       note:
         maxLength: 2000
         type: string
+    type: object
+  leases.LeaseHistoryResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/leases.LeaseResponse'
+        type: array
     type: object
   leases.LeaseListResponse:
     properties:
@@ -371,6 +409,53 @@ definitions:
       total:
         example: 50
         type: integer
+    type: object
+  leases.LeaseRenewalCreateRequest:
+    properties:
+      currency:
+        type: string
+      end_date:
+        type: string
+      monthly_rent_amount_minor:
+        minimum: 0
+        type: integer
+      note:
+        maxLength: 2000
+        type: string
+      start_date:
+        type: string
+    required:
+    - monthly_rent_amount_minor
+    - start_date
+    type: object
+  leases.LeaseRenewalDecisionRequest:
+    properties:
+      note:
+        maxLength: 2000
+        type: string
+    type: object
+  leases.LeaseRenewalOfferResponse:
+    properties:
+      created_at:
+        type: string
+      currency:
+        type: string
+      decided_at:
+        type: string
+      decision_note:
+        type: string
+      end_date:
+        type: string
+      id:
+        type: string
+      lease_id:
+        type: string
+      monthly_rent_amount_minor:
+        type: integer
+      start_date:
+        type: string
+      status:
+        type: string
     type: object
   leases.LeaseResponse:
     properties:
@@ -454,6 +539,36 @@ definitions:
         - ended
         - cancelled
         type: string
+    type: object
+  leases.TenantStatementEntry:
+    properties:
+      amount_minor:
+        type: integer
+      currency:
+        type: string
+      description:
+        type: string
+      kind:
+        type: string
+      occurred_at:
+        type: string
+      reference_id:
+        type: string
+    type: object
+  leases.TenantStatementResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/leases.TenantStatementEntry'
+        type: array
+      outstanding_minor:
+        type: integer
+      tenant_id:
+        type: string
+      total_charges_minor:
+        type: integer
+      total_payments_minor:
+        type: integer
     type: object
   organizations.CreateOrganizationRequest:
     properties:
@@ -626,7 +741,6 @@ definitions:
         minimum: 1
         type: integer
       currency:
-        example: USD
         type: string
       lease_id:
         type: string
@@ -643,6 +757,23 @@ definitions:
     required:
     - amount_minor
     - lease_id
+    type: object
+  payments.PaymentMethodSplitItem:
+    properties:
+      collected_minor:
+        type: integer
+      count:
+        type: integer
+      method:
+        example: card
+        type: string
+    type: object
+  payments.PaymentMethodSplitResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/payments.PaymentMethodSplitItem'
+        type: array
     type: object
   payments.PaymentResponse:
     properties:
@@ -664,6 +795,118 @@ definitions:
         type: string
       status:
         type: string
+    type: object
+  payments.PaymentSummaryPoint:
+    properties:
+      collected_minor:
+        type: integer
+      month:
+        example: 2026-04
+        type: string
+      outstanding_due_minor:
+        type: integer
+      pending_minor:
+        type: integer
+    type: object
+  payments.PaymentSummaryResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/payments.PaymentSummaryPoint'
+        type: array
+    type: object
+  payments.ReminderCandidate:
+    properties:
+      amount_minor:
+        type: integer
+      channel:
+        type: string
+      charge_id:
+        type: string
+      currency:
+        type: string
+      due_at:
+        type: string
+      lease_id:
+        type: string
+      suggested_level:
+        type: string
+      tenant_email:
+        type: string
+      tenant_id:
+        type: string
+      tenant_name:
+        type: string
+      tenant_phone:
+        type: string
+    type: object
+  payments.ReminderCandidatesResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/payments.ReminderCandidate'
+        type: array
+    type: object
+  payments.ReminderHistoryItem:
+    properties:
+      channel:
+        type: string
+      charge_id:
+        type: string
+      id:
+        type: string
+      lease_id:
+        type: string
+      level:
+        type: string
+      note:
+        type: string
+      sent_at:
+        type: string
+      status:
+        type: string
+      tenant_id:
+        type: string
+    type: object
+  payments.ReminderHistoryResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/payments.ReminderHistoryItem'
+        type: array
+    type: object
+  payments.SendRemindersRequest:
+    properties:
+      channel:
+        enum:
+        - email
+        - sms
+        type: string
+      charge_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      level:
+        enum:
+        - reminder_1
+        - reminder_2
+        - final_notice
+        type: string
+      note:
+        maxLength: 512
+        type: string
+    required:
+    - charge_ids
+    type: object
+  payments.SendRemindersResponse:
+    properties:
+      requested:
+        type: integer
+      sent:
+        type: integer
+      skipped:
+        type: integer
     type: object
   response.Envelope-auth_AuthSessionResponse:
     properties:
@@ -695,25 +938,70 @@ definitions:
       data:
         $ref: '#/definitions/buildings.BuildingResponse'
     type: object
+  response.Envelope-leases_LeaseCloseoutResponse:
+    properties:
+      data:
+        $ref: '#/definitions/leases.LeaseCloseoutResponse'
+    type: object
+  response.Envelope-leases_LeaseHistoryResponse:
+    properties:
+      data:
+        $ref: '#/definitions/leases.LeaseHistoryResponse'
+    type: object
   response.Envelope-leases_LeaseListResponse:
     properties:
       data:
         $ref: '#/definitions/leases.LeaseListResponse'
+    type: object
+  response.Envelope-leases_LeaseRenewalOfferResponse:
+    properties:
+      data:
+        $ref: '#/definitions/leases.LeaseRenewalOfferResponse'
     type: object
   response.Envelope-leases_LeaseResponse:
     properties:
       data:
         $ref: '#/definitions/leases.LeaseResponse'
     type: object
+  response.Envelope-leases_TenantStatementResponse:
+    properties:
+      data:
+        $ref: '#/definitions/leases.TenantStatementResponse'
+    type: object
   response.Envelope-organizations_OrganizationResponse:
     properties:
       data:
         $ref: '#/definitions/organizations.OrganizationResponse'
     type: object
+  response.Envelope-payments_PaymentMethodSplitResponse:
+    properties:
+      data:
+        $ref: '#/definitions/payments.PaymentMethodSplitResponse'
+    type: object
   response.Envelope-payments_PaymentResponse:
     properties:
       data:
         $ref: '#/definitions/payments.PaymentResponse'
+    type: object
+  response.Envelope-payments_PaymentSummaryResponse:
+    properties:
+      data:
+        $ref: '#/definitions/payments.PaymentSummaryResponse'
+    type: object
+  response.Envelope-payments_ReminderCandidatesResponse:
+    properties:
+      data:
+        $ref: '#/definitions/payments.ReminderCandidatesResponse'
+    type: object
+  response.Envelope-payments_ReminderHistoryResponse:
+    properties:
+      data:
+        $ref: '#/definitions/payments.ReminderHistoryResponse'
+    type: object
+  response.Envelope-payments_SendRemindersResponse:
+    properties:
+      data:
+        $ref: '#/definitions/payments.SendRemindersResponse'
     type: object
   response.Envelope-tenants_TenantListResponse:
     properties:
@@ -2354,6 +2642,61 @@ paths:
       summary: Approve lease
       tags:
       - leases
+  /api/v1/organizations/{id}/leases/{leaseId}/closeout:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lease ID
+        format: uuid
+        in: path
+        name: leaseId
+        required: true
+        type: string
+      - description: Closeout payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/leases.LeaseCloseoutRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope-leases_LeaseCloseoutResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Lease closeout
+      tags:
+      - leases
   /api/v1/organizations/{id}/leases/{leaseId}/end:
     post:
       consumes:
@@ -2408,6 +2751,45 @@ paths:
       summary: End lease
       tags:
       - leases
+  /api/v1/organizations/{id}/leases/{leaseId}/history:
+    get:
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lease ID
+        format: uuid
+        in: path
+        name: leaseId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-leases_LeaseHistoryResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Lease history
+      tags:
+      - leases
   /api/v1/organizations/{id}/leases/{leaseId}/reject:
     post:
       consumes:
@@ -2460,6 +2842,259 @@ paths:
       summary: Reject lease
       tags:
       - leases
+  /api/v1/organizations/{id}/leases/{leaseId}/renewals:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lease ID
+        format: uuid
+        in: path
+        name: leaseId
+        required: true
+        type: string
+      - description: Renewal offer payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/leases.LeaseRenewalCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope-leases_LeaseRenewalOfferResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Create lease renewal offer
+      tags:
+      - leases
+  /api/v1/organizations/{id}/leases/{leaseId}/renewals/{offerId}/accept:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lease ID
+        format: uuid
+        in: path
+        name: leaseId
+        required: true
+        type: string
+      - description: Offer ID
+        format: uuid
+        in: path
+        name: offerId
+        required: true
+        type: string
+      - description: Optional decision note
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/leases.LeaseRenewalDecisionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-leases_LeaseRenewalOfferResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Accept renewal offer
+      tags:
+      - leases
+  /api/v1/organizations/{id}/leases/{leaseId}/renewals/{offerId}/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lease ID
+        format: uuid
+        in: path
+        name: leaseId
+        required: true
+        type: string
+      - description: Offer ID
+        format: uuid
+        in: path
+        name: offerId
+        required: true
+        type: string
+      - description: Optional decision note
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/leases.LeaseRenewalDecisionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-leases_LeaseRenewalOfferResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Reject renewal offer
+      tags:
+      - leases
+  /api/v1/organizations/{id}/leases/tenants/{tenantId}/statement:
+    get:
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tenant ID
+        format: uuid
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-leases_TenantStatementResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Tenant statement
+      tags:
+      - leases
+  /api/v1/organizations/{id}/leases/tenants/{tenantId}/statement/export:
+    get:
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tenant ID
+        format: uuid
+        in: path
+        name: tenantId
+        required: true
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: CSV file
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Export tenant statement CSV
+      tags:
+      - leases
   /api/v1/organizations/{id}/payments/initiate:
     post:
       consumes:
@@ -2509,6 +3144,196 @@ paths:
       security:
       - BearerAuth: []
       summary: Initiate payment
+      tags:
+      - payments
+  /api/v1/organizations/{id}/payments/method-split:
+    get:
+      description: Returns collected totals grouped by payment method.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_PaymentMethodSplitResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Payments method split
+      tags:
+      - payments
+  /api/v1/organizations/{id}/payments/reminders/candidates:
+    get:
+      description: Lists upcoming/overdue unpaid charge candidates for reminder workflows.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_ReminderCandidatesResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Reminder candidates
+      tags:
+      - payments
+  /api/v1/organizations/{id}/payments/reminders/history:
+    get:
+      description: Returns sent reminder history.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Max rows (default 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_ReminderHistoryResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Reminder history
+      tags:
+      - payments
+  /api/v1/organizations/{id}/payments/reminders/send:
+    post:
+      consumes:
+      - application/json
+      description: Bulk creates reminder send records for selected charge IDs.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Bulk reminder payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/payments.SendRemindersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_SendRemindersResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Send reminders
+      tags:
+      - payments
+  /api/v1/organizations/{id}/payments/summary:
+    get:
+      description: Returns monthly payments and outstanding aggregates.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Number of months (default 6)
+        in: query
+        name: months
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_PaymentSummaryResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Payments summary
       tags:
       - payments
   /api/v1/organizations/{id}/tenants:

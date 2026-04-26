@@ -81,3 +81,66 @@ type ListLeasesQuery struct {
 	TenantID   string `form:"tenant_id" binding:"omitempty,uuid"`
 	ActiveOn   string `form:"active_on" binding:"omitempty" example:"2026-04-18"`
 }
+
+type LeaseRenewalCreateRequest struct {
+	StartDate              time.Time  `json:"start_date" binding:"required"`
+	EndDate                *time.Time `json:"end_date"`
+	MonthlyRentAmountMinor int64      `json:"monthly_rent_amount_minor" binding:"required,min=0"`
+	Currency               string     `json:"currency" binding:"omitempty,len=3"`
+	Note                   string     `json:"note" binding:"omitempty,max=2000"`
+}
+
+type LeaseRenewalDecisionRequest struct {
+	Note string `json:"note" binding:"omitempty,max=2000"`
+}
+
+type LeaseRenewalOfferResponse struct {
+	ID                     string     `json:"id"`
+	LeaseID                string     `json:"lease_id"`
+	StartDate              time.Time  `json:"start_date"`
+	EndDate                *time.Time `json:"end_date,omitempty"`
+	MonthlyRentAmountMinor int64      `json:"monthly_rent_amount_minor"`
+	Currency               string     `json:"currency"`
+	Status                 string     `json:"status"`
+	DecisionNote           string     `json:"decision_note,omitempty"`
+	DecidedAt              *time.Time `json:"decided_at,omitempty"`
+	CreatedAt              time.Time  `json:"created_at"`
+}
+
+type LeaseHistoryResponse struct {
+	Items []LeaseResponse `json:"items"`
+}
+
+type LeaseCloseoutRequest struct {
+	MoveOutDate          time.Time `json:"move_out_date" binding:"required"`
+	FinalSettlementMinor int64     `json:"final_settlement_minor"`
+	Currency             string    `json:"currency" binding:"omitempty,len=3"`
+	Notes                string    `json:"notes" binding:"omitempty,max=4000"`
+}
+
+type LeaseCloseoutResponse struct {
+	ID                   string    `json:"id"`
+	LeaseID              string    `json:"lease_id"`
+	MoveOutDate          time.Time `json:"move_out_date"`
+	FinalSettlementMinor int64     `json:"final_settlement_minor"`
+	Currency             string    `json:"currency"`
+	Notes                string    `json:"notes,omitempty"`
+	CreatedAt            time.Time `json:"created_at"`
+}
+
+type TenantStatementEntry struct {
+	Kind        string    `json:"kind"`
+	ReferenceID string    `json:"reference_id"`
+	AmountMinor int64     `json:"amount_minor"`
+	Currency    string    `json:"currency"`
+	OccurredAt  time.Time `json:"occurred_at"`
+	Description string    `json:"description,omitempty"`
+}
+
+type TenantStatementResponse struct {
+	TenantID           string                 `json:"tenant_id"`
+	Items              []TenantStatementEntry `json:"items"`
+	TotalChargesMinor  int64                  `json:"total_charges_minor"`
+	TotalPaymentsMinor int64                  `json:"total_payments_minor"`
+	OutstandingMinor   int64                  `json:"outstanding_minor"`
+}

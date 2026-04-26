@@ -332,7 +332,7 @@ func isBootstrapRole(r users.UserRole) bool {
 
 func isLoginRole(r users.UserRole) bool {
 	switch r {
-	case users.UserRoleAdmin, users.UserRoleLandlord, users.UserRoleManager, users.UserRoleStaff, users.UserRoleTenant:
+	case users.UserRoleAdmin, users.UserRoleLandlord, users.UserRoleManager, users.UserRolePropertyManager, users.UserRoleAccountant, users.UserRoleStaff, users.UserRoleTenant:
 		return true
 	default:
 		return false

@@ -1,6 +1,10 @@
 package leases
 
 import (
+	"bytes"
+	"encoding/csv"
+	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -325,4 +329,263 @@ func (h *Handler) Reject(c *gin.Context) {
 		return
 	}
 	response.OK(c, out)
+}
+
+// History godoc
+//
+//	@Summary		Lease history
+//	@Tags			leases
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id		path	string	true	"Organization ID"	Format(uuid)
+//	@Param			leaseId	path	string	true	"Lease ID"	Format(uuid)
+//	@Success		200		{object}	response.Envelope[LeaseHistoryResponse]
+//	@Failure		401		{object}	response.ErrorBody
+//	@Failure		403		{object}	response.ErrorBody
+//	@Failure		404		{object}	response.ErrorBody
+//	@Router			/api/v1/organizations/{id}/leases/{leaseId}/history [get]
+func (h *Handler) History(c *gin.Context) {
+	actor, err := actorFromContext(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	out, err := h.svc.History(c.Request.Context(), actor, c.Param("id"), c.Param("leaseId"))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+
+// CreateRenewalOffer godoc
+//
+//	@Summary		Create lease renewal offer
+//	@Tags			leases
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path	string						true	"Organization ID"	Format(uuid)
+//	@Param			leaseId	path	string						true	"Lease ID"	Format(uuid)
+//	@Param			body	body	LeaseRenewalCreateRequest	true	"Renewal offer payload"
+//	@Success		201		{object}	response.Envelope[LeaseRenewalOfferResponse]
+//	@Failure		400		{object}	response.ErrorBody
+//	@Failure		401		{object}	response.ErrorBody
+//	@Failure		403		{object}	response.ErrorBody
+//	@Failure		404		{object}	response.ErrorBody
+//	@Failure		500		{object}	response.ErrorBody
+//	@Router			/api/v1/organizations/{id}/leases/{leaseId}/renewals [post]
+func (h *Handler) CreateRenewalOffer(c *gin.Context) {
+	actor, err := actorFromContext(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	var req LeaseRenewalCreateRequest
+	if err := validator.BindJSON(c, &req); err != nil {
+		response.Error(c, err)
+		return
+	}
+	out, err := h.svc.CreateRenewalOffer(c.Request.Context(), actor, c.Param("id"), c.Param("leaseId"), &req, c.ClientIP(), c.GetHeader("User-Agent"))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Created(c, out)
+}
+
+// AcceptRenewalOffer godoc
+//
+//	@Summary		Accept renewal offer
+//	@Tags			leases
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path	string							true	"Organization ID"	Format(uuid)
+//	@Param			leaseId	path	string							true	"Lease ID"	Format(uuid)
+//	@Param			offerId	path	string							true	"Offer ID"	Format(uuid)
+//	@Param			body	body	LeaseRenewalDecisionRequest	false	"Optional decision note"
+//	@Success		200		{object}	response.Envelope[LeaseRenewalOfferResponse]
+//	@Failure		400		{object}	response.ErrorBody
+//	@Failure		401		{object}	response.ErrorBody
+//	@Failure		403		{object}	response.ErrorBody
+//	@Failure		404		{object}	response.ErrorBody
+//	@Failure		500		{object}	response.ErrorBody
+//	@Router			/api/v1/organizations/{id}/leases/{leaseId}/renewals/{offerId}/accept [post]
+func (h *Handler) AcceptRenewalOffer(c *gin.Context) {
+	actor, err := actorFromContext(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	var req LeaseRenewalDecisionRequest
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			response.Error(c, apierrors.Wrap(err, apierrors.ErrValidation))
+			return
+		}
+	}
+	if err := validator.Struct(&req); err != nil {
+		response.Error(c, err)
+		return
+	}
+	out, err := h.svc.AcceptRenewalOffer(c.Request.Context(), actor, c.Param("id"), c.Param("leaseId"), c.Param("offerId"), &req, c.ClientIP(), c.GetHeader("User-Agent"))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+
+// RejectRenewalOffer godoc
+//
+//	@Summary		Reject renewal offer
+//	@Tags			leases
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path	string							true	"Organization ID"	Format(uuid)
+//	@Param			leaseId	path	string							true	"Lease ID"	Format(uuid)
+//	@Param			offerId	path	string							true	"Offer ID"	Format(uuid)
+//	@Param			body	body	LeaseRenewalDecisionRequest	false	"Optional decision note"
+//	@Success		200		{object}	response.Envelope[LeaseRenewalOfferResponse]
+//	@Failure		400		{object}	response.ErrorBody
+//	@Failure		401		{object}	response.ErrorBody
+//	@Failure		403		{object}	response.ErrorBody
+//	@Failure		404		{object}	response.ErrorBody
+//	@Failure		500		{object}	response.ErrorBody
+//	@Router			/api/v1/organizations/{id}/leases/{leaseId}/renewals/{offerId}/reject [post]
+func (h *Handler) RejectRenewalOffer(c *gin.Context) {
+	actor, err := actorFromContext(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	var req LeaseRenewalDecisionRequest
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			response.Error(c, apierrors.Wrap(err, apierrors.ErrValidation))
+			return
+		}
+	}
+	if err := validator.Struct(&req); err != nil {
+		response.Error(c, err)
+		return
+	}
+	out, err := h.svc.RejectRenewalOffer(c.Request.Context(), actor, c.Param("id"), c.Param("leaseId"), c.Param("offerId"), &req, c.ClientIP(), c.GetHeader("User-Agent"))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+
+// Closeout godoc
+//
+//	@Summary		Lease closeout
+//	@Tags			leases
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path	string				true	"Organization ID"	Format(uuid)
+//	@Param			leaseId	path	string				true	"Lease ID"	Format(uuid)
+//	@Param			body	body	LeaseCloseoutRequest	true	"Closeout payload"
+//	@Success		201		{object}	response.Envelope[LeaseCloseoutResponse]
+//	@Failure		400		{object}	response.ErrorBody
+//	@Failure		401		{object}	response.ErrorBody
+//	@Failure		403		{object}	response.ErrorBody
+//	@Failure		404		{object}	response.ErrorBody
+//	@Failure		500		{object}	response.ErrorBody
+//	@Router			/api/v1/organizations/{id}/leases/{leaseId}/closeout [post]
+func (h *Handler) Closeout(c *gin.Context) {
+	actor, err := actorFromContext(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	var req LeaseCloseoutRequest
+	if err := validator.BindJSON(c, &req); err != nil {
+		response.Error(c, err)
+		return
+	}
+	out, err := h.svc.Closeout(c.Request.Context(), actor, c.Param("id"), c.Param("leaseId"), &req, c.ClientIP(), c.GetHeader("User-Agent"))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Created(c, out)
+}
+
+// TenantStatement godoc
+//
+//	@Summary		Tenant statement
+//	@Tags			leases
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id		path	string	true	"Organization ID"	Format(uuid)
+//	@Param			tenantId	path	string	true	"Tenant ID"	Format(uuid)
+//	@Success		200		{object}	response.Envelope[TenantStatementResponse]
+//	@Failure		401		{object}	response.ErrorBody
+//	@Failure		403		{object}	response.ErrorBody
+//	@Failure		500		{object}	response.ErrorBody
+//	@Router			/api/v1/organizations/{id}/leases/tenants/{tenantId}/statement [get]
+func (h *Handler) TenantStatement(c *gin.Context) {
+	actor, err := actorFromContext(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	out, err := h.svc.TenantStatement(c.Request.Context(), actor, c.Param("id"), c.Param("tenantId"))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+
+// TenantStatementExport godoc
+//
+//	@Summary		Export tenant statement CSV
+//	@Tags			leases
+//	@Security		BearerAuth
+//	@Produce		text/csv
+//	@Param			id		path	string	true	"Organization ID"	Format(uuid)
+//	@Param			tenantId	path	string	true	"Tenant ID"	Format(uuid)
+//	@Success		200		{string}	string	"CSV file"
+//	@Failure		401		{object}	response.ErrorBody
+//	@Failure		403		{object}	response.ErrorBody
+//	@Failure		500		{object}	response.ErrorBody
+//	@Router			/api/v1/organizations/{id}/leases/tenants/{tenantId}/statement/export [get]
+func (h *Handler) TenantStatementExport(c *gin.Context) {
+	actor, err := actorFromContext(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	out, err := h.svc.TenantStatement(c.Request.Context(), actor, c.Param("id"), c.Param("tenantId"))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+	_ = w.Write([]string{"kind", "reference_id", "amount_minor", "currency", "occurred_at", "description"})
+	for i := range out.Items {
+		_ = w.Write([]string{
+			out.Items[i].Kind,
+			out.Items[i].ReferenceID,
+			fmt.Sprintf("%d", out.Items[i].AmountMinor),
+			out.Items[i].Currency,
+			out.Items[i].OccurredAt.UTC().Format(time.RFC3339),
+			out.Items[i].Description,
+		})
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		response.Error(c, apierrors.Wrap(err, apierrors.ErrInternal))
+		return
+	}
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", "attachment; filename=tenant_statement.csv")
+	c.String(http.StatusOK, buf.String())
 }

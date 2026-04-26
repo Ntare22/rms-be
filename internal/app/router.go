@@ -17,6 +17,7 @@ import (
 	"rms-be/internal/modules/buildings"
 	"rms-be/internal/modules/leases"
 	"rms-be/internal/modules/organizations"
+	"rms-be/internal/modules/payments"
 	"rms-be/internal/modules/tenants"
 	"rms-be/internal/modules/units"
 	"rms-be/internal/modules/users"
@@ -101,7 +102,7 @@ func NewRouter(deps *Dependencies) *gin.Engine {
 	units.RegisterRoutes(orgTree.Group("/buildings/:buildingId/units"), deps.Units)
 	tenants.RegisterRoutes(orgTree.Group("/tenants"), deps.Tenants)
 	leases.RegisterRoutes(orgTree.Group("/leases"), deps.Leases)
-	orgTree.Group("/payments").POST("/initiate", deps.Payments.Initiate)
+	payments.RegisterRoutes(orgTree.Group("/payments"), deps.Payments)
 
 	admin := protected.Group("/admin")
 	admin.Use(middleware.RequireRoles(middleware.RoleAdmin))

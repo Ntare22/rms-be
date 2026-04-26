@@ -310,7 +310,7 @@ func assertOrgScope(actor Actor, organizationID string) error {
 func canManageUsers(role string) bool {
 	r := strings.TrimSpace(strings.ToLower(role))
 	switch r {
-	case middleware.RoleAdmin, middleware.RoleLandlord, middleware.RoleManager:
+	case middleware.RoleAdmin, middleware.RoleLandlord, middleware.RoleManager, middleware.RolePropertyManager:
 		return true
 	default:
 		return false
@@ -323,8 +323,8 @@ func actorCanAssignRole(actorRole string, assign UserRole) bool {
 	case middleware.RoleAdmin:
 		return true
 	case middleware.RoleLandlord:
-		return assign == UserRoleManager || assign == UserRoleStaff || assign == UserRoleTenant
-	case middleware.RoleManager:
+		return assign == UserRoleManager || assign == UserRolePropertyManager || assign == UserRoleAccountant || assign == UserRoleStaff || assign == UserRoleTenant
+	case middleware.RoleManager, middleware.RolePropertyManager:
 		return assign == UserRoleStaff || assign == UserRoleTenant
 	default:
 		return false
@@ -337,8 +337,8 @@ func actorCanModifyTarget(actorRole string, target *User) bool {
 	case middleware.RoleAdmin:
 		return true
 	case middleware.RoleLandlord:
-		return target.Role == UserRoleManager || target.Role == UserRoleStaff || target.Role == UserRoleTenant
-	case middleware.RoleManager:
+		return target.Role == UserRoleManager || target.Role == UserRolePropertyManager || target.Role == UserRoleAccountant || target.Role == UserRoleStaff || target.Role == UserRoleTenant
+	case middleware.RoleManager, middleware.RolePropertyManager:
 		return target.Role == UserRoleStaff || target.Role == UserRoleTenant
 	default:
 		return false
@@ -348,7 +348,7 @@ func actorCanModifyTarget(actorRole string, target *User) bool {
 func parseRole(s string) (UserRole, error) {
 	r := UserRole(strings.TrimSpace(strings.ToLower(s)))
 	switch r {
-	case UserRoleAdmin, UserRoleLandlord, UserRoleManager, UserRoleStaff, UserRoleTenant:
+	case UserRoleAdmin, UserRoleLandlord, UserRoleManager, UserRolePropertyManager, UserRoleAccountant, UserRoleStaff, UserRoleTenant:
 		return r, nil
 	default:
 		var z UserRole

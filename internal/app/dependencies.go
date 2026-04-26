@@ -10,6 +10,7 @@ import (
 	"rms-be/internal/api/security"
 	"rms-be/internal/config"
 	"rms-be/internal/database"
+	"rms-be/internal/integrations/pesapal"
 	"rms-be/internal/modules/auth"
 	"rms-be/internal/modules/buildings"
 	"rms-be/internal/modules/leases"
@@ -101,7 +102,14 @@ func NewDependencies(cfg *config.Config, log logger.Logger, db database.DB, clk 
 	leaseHandler := leases.NewHandler(leaseSvc)
 
 	paymentRepo := payments.NewRepository(gdb)
-	paymentSvc := payments.NewService(paymentRepo)
+	pesaClient := pesapal.NewClient(pesapal.Config{
+		BaseURL:        cfg.PesaPalBaseURL,
+		ConsumerKey:    cfg.PesaPalConsumerKey,
+		ConsumerSecret: cfg.PesaPalConsumerSecret,
+		IPNID:          cfg.PesaPalIPNID,
+		Timeout:        cfg.PesaPalTimeout,
+	})
+	paymentSvc := payments.NewService(paymentRepo, pesaClient, cfg.AppBaseURL)
 	paymentHandler := payments.NewHandler(paymentSvc)
 
 	return &Dependencies{

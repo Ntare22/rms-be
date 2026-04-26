@@ -48,6 +48,7 @@ type Config struct {
 	PesaPalIPNID               string
 	PesaPalIPNNotificationType string
 	PesaPalTimeout             time.Duration
+	PesaPalDebug               bool
 
 	SMSProvider string
 	SMSAPIKey   string
@@ -111,6 +112,10 @@ func Load() (*Config, error) {
 	if err != nil || pesapalTimeoutSec <= 0 {
 		return nil, fmt.Errorf("invalid PESAPAL_TIMEOUT_SECONDS")
 	}
+	pesapalDebug, err := strconv.ParseBool(getEnv("PESAPAL_DEBUG", "false"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid PESAPAL_DEBUG")
+	}
 	inviteTemplateID, err := parseInt64Env("MAILJET_TEMPLATE_INVITE_ID", 0)
 	if err != nil {
 		return nil, fmt.Errorf("invalid MAILJET_TEMPLATE_INVITE_ID: %w", err)
@@ -154,6 +159,7 @@ func Load() (*Config, error) {
 		PesaPalIPNID:                     getEnv("PESAPAL_IPN_ID", ""),
 		PesaPalIPNNotificationType:       strings.ToUpper(getEnv("PESAPAL_IPN_NOTIFICATION_TYPE", "GET")),
 		PesaPalTimeout:                   time.Duration(pesapalTimeoutSec) * time.Second,
+		PesaPalDebug:                     pesapalDebug,
 		SMSProvider:                      getEnv("SMS_PROVIDER", ""),
 		SMSAPIKey:                        getEnv("SMS_API_KEY", ""),
 		InternalJobSecret:                strings.TrimSpace(os.Getenv("INTERNAL_JOB_SECRET")),

@@ -22,6 +22,7 @@ type Config struct {
 	ConsumerSecret string
 	IPNID          string
 	Timeout        time.Duration
+	Debug          bool
 }
 
 // Enabled reports whether integration has enough credentials to run.

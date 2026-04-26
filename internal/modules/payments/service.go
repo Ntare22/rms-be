@@ -413,6 +413,17 @@ func (s *Service) GetTransactionStatus(ctx context.Context, actor Actor, orderTr
 	}, nil
 }
 
+func (s *Service) GeneratePesapalToken(ctx context.Context) (*PesapalTokenResponse, error) {
+	if s.gateway == nil {
+		return nil, apierrors.ErrNotImplemented
+	}
+	token, err := s.gateway.RequestToken(ctx)
+	if err != nil {
+		return nil, apierrors.Wrap(fmt.Errorf("pesapal request token failed: %w", err), apierrors.ErrInternal)
+	}
+	return &PesapalTokenResponse{Token: strings.TrimSpace(token)}, nil
+}
+
 func assertOrgScope(actor Actor, organizationID string) error {
 	if strings.EqualFold(strings.TrimSpace(actor.Role), middleware.RoleAdmin) {
 		return nil

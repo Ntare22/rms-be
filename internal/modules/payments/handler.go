@@ -356,3 +356,22 @@ func (h *Handler) GetTransactionStatus(c *gin.Context) {
 	}
 	response.OK(c, out)
 }
+
+// GeneratePesapalToken godoc
+//
+//	@Summary		Generate Pesapal token (test)
+//	@Description	Generates a fresh Pesapal bearer token for diagnostics/testing.
+//	@Tags			payments
+//	@Produce		json
+//	@Success		200	{object}	response.Envelope[PesapalTokenResponse]
+//	@Failure		500	{object}	response.ErrorBody
+//	@Router			/api/v1/payments/pesapal/token [post]
+func (h *Handler) GeneratePesapalToken(c *gin.Context) {
+	out, err := h.svc.GeneratePesapalToken(c.Request.Context())
+	if err != nil {
+		_ = c.Error(err)
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}

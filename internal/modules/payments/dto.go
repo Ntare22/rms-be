@@ -157,3 +157,8 @@ type PesapalTransactionStatusResponse struct {
 	Status                   string  `json:"status"`
 	Message                  string  `json:"message"`
 }
+
+// PesapalTokenResponse is a test/debug projection for generated auth token.
+type PesapalTokenResponse struct {
+	Token string `json:"token"`
+}

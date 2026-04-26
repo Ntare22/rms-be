@@ -18,3 +18,8 @@ func RegisterIntegrationRoutes(rg *gin.RouterGroup, h *Handler) {
 	rg.POST("/pesapal/ipn/register", h.RegisterPesapalIPN)
 	rg.GET("/pesapal/ipn/list", h.ListPesapalIPN)
 }
+
+// RegisterPublicIntegrationRoutes mounts public integration test endpoints under /payments.
+func RegisterPublicIntegrationRoutes(rg *gin.RouterGroup, h *Handler) {
+	rg.POST("/pesapal/token", h.GeneratePesapalToken)
+}

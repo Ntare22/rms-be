@@ -77,6 +77,7 @@ func NewRouter(deps *Dependencies) *gin.Engine {
 	v1 := r.Group("/api/v1")
 	v1.GET("/payments/ipn/pesapal", deps.Payments.PesapalIPNCallback)
 	v1.POST("/payments/ipn/pesapal", deps.Payments.PesapalIPNCallback)
+	payments.RegisterPublicIntegrationRoutes(v1.Group("/payments"), deps.Payments)
 
 	// Public auth endpoints (rate-limited).
 	authPublic := v1.Group("/auth")

@@ -3505,6 +3505,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/payments/pesapal/token": {
+            "post": {
+                "description": "Generates a fresh Pesapal bearer token for diagnostics/testing.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Generate Pesapal token (test)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-payments_PesapalTokenResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/payments/transaction-status": {
             "get": {
                 "security": [
@@ -4753,6 +4779,14 @@ const docTemplate = `{
                 }
             }
         },
+        "payments.PesapalTokenResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
         "payments.PesapalTransactionStatusResponse": {
             "type": "object",
             "properties": {
@@ -5109,6 +5143,14 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/payments.PesapalIPNResponse"
+                }
+            }
+        },
+        "response.Envelope-payments_PesapalTokenResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/payments.PesapalTokenResponse"
                 }
             }
         },

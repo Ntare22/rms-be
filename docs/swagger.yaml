@@ -842,6 +842,11 @@ definitions:
       url:
         type: string
     type: object
+  payments.PesapalTokenResponse:
+    properties:
+      token:
+        type: string
+    type: object
   payments.PesapalTransactionStatusResponse:
     properties:
       amount:
@@ -1074,6 +1079,11 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/payments.PesapalIPNResponse'
+    type: object
+  response.Envelope-payments_PesapalTokenResponse:
+    properties:
+      data:
+        $ref: '#/definitions/payments.PesapalTokenResponse'
     type: object
   response.Envelope-payments_PesapalTransactionStatusResponse:
     properties:
@@ -3971,6 +3981,23 @@ paths:
       security:
       - BearerAuth: []
       summary: Register Pesapal IPN
+      tags:
+      - payments
+  /api/v1/payments/pesapal/token:
+    post:
+      description: Generates a fresh Pesapal bearer token for diagnostics/testing.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_PesapalTokenResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      summary: Generate Pesapal token (test)
       tags:
       - payments
   /api/v1/payments/transaction-status:

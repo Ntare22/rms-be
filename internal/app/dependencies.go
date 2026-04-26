@@ -108,6 +108,7 @@ func NewDependencies(cfg *config.Config, log logger.Logger, db database.DB, clk 
 		ConsumerSecret: cfg.PesaPalConsumerSecret,
 		IPNID:          cfg.PesaPalIPNID,
 		Timeout:        cfg.PesaPalTimeout,
+		Debug:          cfg.PesaPalDebug,
 	})
 	paymentSvc := payments.NewService(paymentRepo, pesaClient, cfg.AppBaseURL, cfg.PesaPalIPNID, cfg.PesaPalIPNNotificationType)
 	paymentHandler := payments.NewHandler(paymentSvc)

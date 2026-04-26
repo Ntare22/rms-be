@@ -2469,6 +2469,129 @@
                 }
             }
         },
+        "/api/v1/organizations/{id}/payments/pesapal/ipn/list": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists registered IPN URLs for the current merchant account.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "List Pesapal IPNs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Organization ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-payments_PesapalIPNListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{id}/payments/pesapal/ipn/register": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Registers merchant IPN URL in Pesapal and returns the generated IPN ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Register Pesapal IPN",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Organization ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optional URL/type override",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/payments.RegisterPesapalIPNRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-payments_PesapalIPNResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/organizations/{id}/payments/reminders/candidates": {
             "get": {
                 "security": [
@@ -2688,6 +2811,72 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/response.Envelope-payments_PaymentSummaryResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{id}/payments/transaction-status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Queries Pesapal GetTransactionStatus by order tracking ID and syncs local payment status.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Check Pesapal transaction status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Organization ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pesapal order tracking ID",
+                        "name": "order_tracking_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-payments_PesapalTransactionStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
                         }
                     },
                     "401": {
@@ -3305,6 +3494,90 @@
                         "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payments/ipn/pesapal": {
+            "get": {
+                "description": "Public endpoint for Pesapal status change notifications.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Pesapal IPN callback",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Notification type",
+                        "name": "OrderNotificationType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Provider tracking ID",
+                        "name": "OrderTrackingId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Merchant reference",
+                        "name": "OrderMerchantReference",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-payments_PesapalIPNCallbackResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Public endpoint for Pesapal status change notifications.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Pesapal IPN callback",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Notification type",
+                        "name": "OrderNotificationType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Provider tracking ID",
+                        "name": "OrderTrackingId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Merchant reference",
+                        "name": "OrderMerchantReference",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-payments_PesapalIPNCallbackResponse"
                         }
                     }
                 }
@@ -4458,6 +4731,115 @@
                 }
             }
         },
+        "payments.PesapalIPNCallbackResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "payments.PesapalIPNListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/payments.PesapalIPNResponse"
+                    }
+                }
+            }
+        },
+        "payments.PesapalIPNResponse": {
+            "type": "object",
+            "properties": {
+                "created_date": {
+                    "type": "string"
+                },
+                "ipn_id": {
+                    "type": "string"
+                },
+                "ipn_notification_type_description": {
+                    "type": "string"
+                },
+                "ipn_status_description": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "payments.PesapalTransactionStatusResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "callback_url": {
+                    "type": "string"
+                },
+                "confirmation_code": {
+                    "type": "string"
+                },
+                "created_date": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "merchant_reference": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "order_tracking_id": {
+                    "type": "string"
+                },
+                "payment_account": {
+                    "type": "string"
+                },
+                "payment_method": {
+                    "type": "string"
+                },
+                "payment_status_code": {
+                    "type": "string"
+                },
+                "payment_status_description": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "integer"
+                }
+            }
+        },
+        "payments.RegisterPesapalIPNRequest": {
+            "type": "object",
+            "properties": {
+                "ipn_notification_type": {
+                    "type": "string",
+                    "enum": [
+                        "GET",
+                        "POST",
+                        "get",
+                        "post"
+                    ]
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
         "payments.ReminderCandidate": {
             "type": "object",
             "properties": {
@@ -4723,6 +5105,38 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/payments.PaymentSummaryResponse"
+                }
+            }
+        },
+        "response.Envelope-payments_PesapalIPNCallbackResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/payments.PesapalIPNCallbackResponse"
+                }
+            }
+        },
+        "response.Envelope-payments_PesapalIPNListResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/payments.PesapalIPNListResponse"
+                }
+            }
+        },
+        "response.Envelope-payments_PesapalIPNResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/payments.PesapalIPNResponse"
+                }
+            }
+        },
+        "response.Envelope-payments_PesapalTransactionStatusResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/payments.PesapalTransactionStatusResponse"
                 }
             }
         },

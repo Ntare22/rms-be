@@ -224,3 +224,138 @@ func (h *Handler) SendReminders(c *gin.Context) {
 	}
 	response.OK(c, out)
 }
+
+// RegisterPesapalIPN godoc
+//
+//	@Summary		Register Pesapal IPN
+//	@Description	Registers merchant IPN URL in Pesapal and returns the generated IPN ID.
+//	@Tags			payments
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path	string						true	"Organization ID"	Format(uuid)
+//	@Param			body	body	RegisterPesapalIPNRequest	false	"Optional URL/type override"
+//	@Success		200		{object}	response.Envelope[PesapalIPNResponse]
+//	@Failure		400		{object}	response.ErrorBody
+//	@Failure		401		{object}	response.ErrorBody
+//	@Failure		403		{object}	response.ErrorBody
+//	@Failure		500		{object}	response.ErrorBody
+//	@Router			/api/v1/organizations/{id}/payments/pesapal/ipn/register [post]
+func (h *Handler) RegisterPesapalIPN(c *gin.Context) {
+	actor, err := actorFromContext(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	var req RegisterPesapalIPNRequest
+	if c.Request.ContentLength > 0 {
+		if err := validator.BindJSON(c, &req); err != nil {
+			response.Error(c, err)
+			return
+		}
+	}
+	out, err := h.svc.RegisterPesapalIPN(c.Request.Context(), actor, c.Param("id"), &req)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+
+// ListPesapalIPN godoc
+//
+//	@Summary		List Pesapal IPNs
+//	@Description	Lists registered IPN URLs for the current merchant account.
+//	@Tags			payments
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id	path	string	true	"Organization ID"	Format(uuid)
+//	@Success		200	{object}	response.Envelope[PesapalIPNListResponse]
+//	@Failure		401	{object}	response.ErrorBody
+//	@Failure		403	{object}	response.ErrorBody
+//	@Failure		500	{object}	response.ErrorBody
+//	@Router			/api/v1/organizations/{id}/payments/pesapal/ipn/list [get]
+func (h *Handler) ListPesapalIPN(c *gin.Context) {
+	actor, err := actorFromContext(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	out, err := h.svc.ListPesapalIPN(c.Request.Context(), actor, c.Param("id"))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+
+// PesapalIPNCallback godoc
+//
+//	@Summary		Pesapal IPN callback
+//	@Description	Public endpoint for Pesapal status change notifications.
+//	@Tags			payments
+//	@Accept			json
+//	@Produce		json
+//	@Param			OrderNotificationType	query	string	false	"Notification type"
+//	@Param			OrderTrackingId			query	string	false	"Provider tracking ID"
+//	@Param			OrderMerchantReference	query	string	false	"Merchant reference"
+//	@Success		200						{object}	response.Envelope[PesapalIPNCallbackResponse]
+//	@Router			/api/v1/payments/ipn/pesapal [get]
+//	@Router			/api/v1/payments/ipn/pesapal [post]
+func (h *Handler) PesapalIPNCallback(c *gin.Context) {
+	var req PesapalIPNCallbackRequest
+	if c.Request.Method == "POST" && c.Request.ContentLength > 0 {
+		if err := c.ShouldBind(&req); err != nil {
+			// Ack anyway to avoid repeated provider retries on parse mismatch.
+			response.OK(c, PesapalIPNCallbackResponse{Status: "accepted"})
+			return
+		}
+	} else {
+		req = PesapalIPNCallbackRequest{
+			OrderNotificationType:  c.Query("OrderNotificationType"),
+			OrderTrackingID:        c.Query("OrderTrackingId"),
+			OrderMerchantReference: c.Query("OrderMerchantReference"),
+		}
+	}
+	out, err := h.svc.HandlePesapalIPN(c.Request.Context(), &req)
+	if err != nil {
+		// Return accepted to avoid provider retry storms; error is internal-only.
+		response.OK(c, PesapalIPNCallbackResponse{Status: "accepted"})
+		return
+	}
+	response.OK(c, out)
+}
+
+// GetTransactionStatus godoc
+//
+//	@Summary		Check Pesapal transaction status
+//	@Description	Queries Pesapal GetTransactionStatus by order tracking ID and syncs local payment status.
+//	@Tags			payments
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id					path	string	true	"Organization ID"	Format(uuid)
+//	@Param			order_tracking_id	query	string	true	"Pesapal order tracking ID"
+//	@Success		200					{object}	response.Envelope[PesapalTransactionStatusResponse]
+//	@Failure		400					{object}	response.ErrorBody
+//	@Failure		401					{object}	response.ErrorBody
+//	@Failure		403					{object}	response.ErrorBody
+//	@Failure		500					{object}	response.ErrorBody
+//	@Router			/api/v1/organizations/{id}/payments/transaction-status [get]
+func (h *Handler) GetTransactionStatus(c *gin.Context) {
+	actor, err := actorFromContext(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	var q TransactionStatusQuery
+	if err := validator.BindQuery(c, &q); err != nil {
+		response.Error(c, err)
+		return
+	}
+	out, err := h.svc.GetTransactionStatus(c.Request.Context(), actor, c.Param("id"), q.OrderTrackingID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}

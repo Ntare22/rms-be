@@ -109,7 +109,7 @@ func NewDependencies(cfg *config.Config, log logger.Logger, db database.DB, clk 
 		IPNID:          cfg.PesaPalIPNID,
 		Timeout:        cfg.PesaPalTimeout,
 	})
-	paymentSvc := payments.NewService(paymentRepo, pesaClient, cfg.AppBaseURL)
+	paymentSvc := payments.NewService(paymentRepo, pesaClient, cfg.AppBaseURL, cfg.PesaPalIPNID, cfg.PesaPalIPNNotificationType)
 	paymentHandler := payments.NewHandler(paymentSvc)
 
 	return &Dependencies{

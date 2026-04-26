@@ -100,3 +100,60 @@ type SendRemindersResponse struct {
 	Skipped   int `json:"skipped"`
 	Requested int `json:"requested"`
 }
+
+// RegisterPesapalIPNRequest allows optional override URL/notification type.
+type RegisterPesapalIPNRequest struct {
+	URL                 string `json:"url" binding:"omitempty,url"`
+	IPNNotificationType string `json:"ipn_notification_type" binding:"omitempty,oneof=GET POST get post"`
+}
+
+// PesapalIPNResponse is an API projection for a registered IPN URL.
+type PesapalIPNResponse struct {
+	URL                            string `json:"url"`
+	IPNID                          string `json:"ipn_id"`
+	CreatedDate                    string `json:"created_date"`
+	IPNNotificationTypeDescription string `json:"ipn_notification_type_description,omitempty"`
+	IPNStatusDescription           string `json:"ipn_status_description,omitempty"`
+	Status                         string `json:"status,omitempty"`
+}
+
+// PesapalIPNListResponse wraps provider IPN rows.
+type PesapalIPNListResponse struct {
+	Items []PesapalIPNResponse `json:"items"`
+}
+
+// PesapalIPNCallbackRequest is sent by Pesapal as GET query or POST body.
+type PesapalIPNCallbackRequest struct {
+	OrderNotificationType  string `json:"OrderNotificationType" form:"OrderNotificationType"`
+	OrderTrackingID        string `json:"OrderTrackingId" form:"OrderTrackingId"`
+	OrderMerchantReference string `json:"OrderMerchantReference" form:"OrderMerchantReference"`
+}
+
+// PesapalIPNCallbackResponse is acknowledgment payload.
+type PesapalIPNCallbackResponse struct {
+	Status string `json:"status"`
+}
+
+// TransactionStatusQuery identifies transaction to check at provider.
+type TransactionStatusQuery struct {
+	OrderTrackingID string `form:"order_tracking_id" binding:"required"`
+}
+
+// PesapalTransactionStatusResponse is API projection from provider status endpoint.
+type PesapalTransactionStatusResponse struct {
+	OrderTrackingID          string  `json:"order_tracking_id"`
+	PaymentMethod            string  `json:"payment_method"`
+	Amount                   float64 `json:"amount"`
+	CreatedDate              string  `json:"created_date"`
+	ConfirmationCode         string  `json:"confirmation_code"`
+	PaymentStatusDescription string  `json:"payment_status_description"`
+	Description              string  `json:"description"`
+	PaymentAccount           string  `json:"payment_account"`
+	CallbackURL              string  `json:"callback_url"`
+	StatusCode               int     `json:"status_code"`
+	MerchantReference        string  `json:"merchant_reference"`
+	PaymentStatusCode        string  `json:"payment_status_code"`
+	Currency                 string  `json:"currency"`
+	Status                   string  `json:"status"`
+	Message                  string  `json:"message"`
+}

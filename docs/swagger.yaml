@@ -815,6 +815,78 @@ definitions:
           $ref: '#/definitions/payments.PaymentSummaryPoint'
         type: array
     type: object
+  payments.PesapalIPNCallbackResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  payments.PesapalIPNListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/payments.PesapalIPNResponse'
+        type: array
+    type: object
+  payments.PesapalIPNResponse:
+    properties:
+      created_date:
+        type: string
+      ipn_id:
+        type: string
+      ipn_notification_type_description:
+        type: string
+      ipn_status_description:
+        type: string
+      status:
+        type: string
+      url:
+        type: string
+    type: object
+  payments.PesapalTransactionStatusResponse:
+    properties:
+      amount:
+        type: number
+      callback_url:
+        type: string
+      confirmation_code:
+        type: string
+      created_date:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      merchant_reference:
+        type: string
+      message:
+        type: string
+      order_tracking_id:
+        type: string
+      payment_account:
+        type: string
+      payment_method:
+        type: string
+      payment_status_code:
+        type: string
+      payment_status_description:
+        type: string
+      status:
+        type: string
+      status_code:
+        type: integer
+    type: object
+  payments.RegisterPesapalIPNRequest:
+    properties:
+      ipn_notification_type:
+        enum:
+        - GET
+        - POST
+        - get
+        - post
+        type: string
+      url:
+        type: string
+    type: object
   payments.ReminderCandidate:
     properties:
       amount_minor:
@@ -987,6 +1059,26 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/payments.PaymentSummaryResponse'
+    type: object
+  response.Envelope-payments_PesapalIPNCallbackResponse:
+    properties:
+      data:
+        $ref: '#/definitions/payments.PesapalIPNCallbackResponse'
+    type: object
+  response.Envelope-payments_PesapalIPNListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/payments.PesapalIPNListResponse'
+    type: object
+  response.Envelope-payments_PesapalIPNResponse:
+    properties:
+      data:
+        $ref: '#/definitions/payments.PesapalIPNResponse'
+    type: object
+  response.Envelope-payments_PesapalTransactionStatusResponse:
+    properties:
+      data:
+        $ref: '#/definitions/payments.PesapalTransactionStatusResponse'
     type: object
   response.Envelope-payments_ReminderCandidatesResponse:
     properties:
@@ -3180,6 +3272,86 @@ paths:
       summary: Payments method split
       tags:
       - payments
+  /api/v1/organizations/{id}/payments/pesapal/ipn/list:
+    get:
+      description: Lists registered IPN URLs for the current merchant account.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_PesapalIPNListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: List Pesapal IPNs
+      tags:
+      - payments
+  /api/v1/organizations/{id}/payments/pesapal/ipn/register:
+    post:
+      consumes:
+      - application/json
+      description: Registers merchant IPN URL in Pesapal and returns the generated
+        IPN ID.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Optional URL/type override
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/payments.RegisterPesapalIPNRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_PesapalIPNResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Register Pesapal IPN
+      tags:
+      - payments
   /api/v1/organizations/{id}/payments/reminders/candidates:
     get:
       description: Lists upcoming/overdue unpaid charge candidates for reminder workflows.
@@ -3334,6 +3506,50 @@ paths:
       security:
       - BearerAuth: []
       summary: Payments summary
+      tags:
+      - payments
+  /api/v1/organizations/{id}/payments/transaction-status:
+    get:
+      description: Queries Pesapal GetTransactionStatus by order tracking ID and syncs
+        local payment status.
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Pesapal order tracking ID
+        in: query
+        name: order_tracking_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_PesapalTransactionStatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Check Pesapal transaction status
       tags:
       - payments
   /api/v1/organizations/{id}/tenants:
@@ -3759,6 +3975,61 @@ paths:
       summary: Update organization user
       tags:
       - users
+  /api/v1/payments/ipn/pesapal:
+    get:
+      consumes:
+      - application/json
+      description: Public endpoint for Pesapal status change notifications.
+      parameters:
+      - description: Notification type
+        in: query
+        name: OrderNotificationType
+        type: string
+      - description: Provider tracking ID
+        in: query
+        name: OrderTrackingId
+        type: string
+      - description: Merchant reference
+        in: query
+        name: OrderMerchantReference
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_PesapalIPNCallbackResponse'
+      summary: Pesapal IPN callback
+      tags:
+      - payments
+    post:
+      consumes:
+      - application/json
+      description: Public endpoint for Pesapal status change notifications.
+      parameters:
+      - description: Notification type
+        in: query
+        name: OrderNotificationType
+        type: string
+      - description: Provider tracking ID
+        in: query
+        name: OrderTrackingId
+        type: string
+      - description: Merchant reference
+        in: query
+        name: OrderMerchantReference
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_PesapalIPNCallbackResponse'
+      summary: Pesapal IPN callback
+      tags:
+      - payments
 securityDefinitions:
   BearerAuth:
     in: header

@@ -42,11 +42,12 @@ type Config struct {
 	MailjetTemplateInviteID          int64
 	MailjetTemplateBillingReminderID int64
 
-	PesaPalBaseURL        string
-	PesaPalConsumerKey    string
-	PesaPalConsumerSecret string
-	PesaPalIPNID          string
-	PesaPalTimeout        time.Duration
+	PesaPalBaseURL             string
+	PesaPalConsumerKey         string
+	PesaPalConsumerSecret      string
+	PesaPalIPNID               string
+	PesaPalIPNNotificationType string
+	PesaPalTimeout             time.Duration
 
 	SMSProvider string
 	SMSAPIKey   string
@@ -151,6 +152,7 @@ func Load() (*Config, error) {
 		PesaPalConsumerKey:               getEnv("PESAPAL_CONSUMER_KEY", ""),
 		PesaPalConsumerSecret:            getEnv("PESAPAL_CONSUMER_SECRET", ""),
 		PesaPalIPNID:                     getEnv("PESAPAL_IPN_ID", ""),
+		PesaPalIPNNotificationType:       strings.ToUpper(getEnv("PESAPAL_IPN_NOTIFICATION_TYPE", "GET")),
 		PesaPalTimeout:                   time.Duration(pesapalTimeoutSec) * time.Second,
 		SMSProvider:                      getEnv("SMS_PROVIDER", ""),
 		SMSAPIKey:                        getEnv("SMS_API_KEY", ""),

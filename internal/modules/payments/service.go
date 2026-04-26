@@ -2,6 +2,7 @@ package payments
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -21,13 +22,25 @@ type Actor struct {
 
 // Service handles payment initiation.
 type Service struct {
-	repo       *Repository
-	gateway    pesapal.Client
-	appBaseURL string
+	repo                  *Repository
+	gateway               pesapal.Client
+	appBaseURL            string
+	defaultNotificationID string
+	ipnNotificationType   string
 }
 
-func NewService(repo *Repository, gateway pesapal.Client, appBaseURL string) *Service {
-	return &Service{repo: repo, gateway: gateway, appBaseURL: strings.TrimSpace(appBaseURL)}
+func NewService(repo *Repository, gateway pesapal.Client, appBaseURL, defaultNotificationID, ipnNotificationType string) *Service {
+	t := strings.ToUpper(strings.TrimSpace(ipnNotificationType))
+	if t == "" {
+		t = "GET"
+	}
+	return &Service{
+		repo:                  repo,
+		gateway:               gateway,
+		appBaseURL:            strings.TrimSpace(appBaseURL),
+		defaultNotificationID: strings.TrimSpace(defaultNotificationID),
+		ipnNotificationType:   t,
+	}
 }
 
 // Initiate creates a pending placeholder payment record.
@@ -82,6 +95,8 @@ func (s *Service) Initiate(ctx context.Context, actor Actor, organizationID stri
 		Status:         PaymentStatusPending,
 		ReceivedAt:     time.Now().UTC(),
 		ExternalRef:    "placeholder_" + time.Now().UTC().Format("20060102150405"),
+		Provider:       "pesapal",
+		ProviderStatus: "pending",
 	}
 	if strings.TrimSpace(actor.UserID) != "" {
 		p.CreatedBy = &actor.UserID
@@ -98,13 +113,17 @@ func (s *Service) Initiate(ctx context.Context, actor Actor, organizationID stri
 			Amount:         p.AmountMinor,
 			Description:    "Lease payment",
 			CallbackURL:    strings.TrimSuffix(s.appBaseURL, "/") + "/payments/callback",
-			NotificationID: "",
+			NotificationID: s.defaultNotificationID,
 		})
 		if err == nil && res != nil {
 			if strings.TrimSpace(res.MerchantRef) != "" {
 				p.ExternalRef = strings.TrimSpace(res.MerchantRef)
-				_ = s.repo.UpdateExternalRef(ctx, organizationID, p.ID, p.ExternalRef)
 			}
+			if strings.TrimSpace(res.OrderTrackingID) != "" {
+				p.OrderTrackingID = strings.TrimSpace(res.OrderTrackingID)
+			}
+			p.ProviderStatus = "submitted"
+			_ = s.repo.UpdateGatewayState(ctx, organizationID, p.ID, p.Provider, p.ExternalRef, p.OrderTrackingID, p.ProviderStatus)
 			if strings.TrimSpace(res.RedirectURL) != "" {
 				nextAction = strings.TrimSpace(res.RedirectURL)
 			}
@@ -285,6 +304,127 @@ func (s *Service) SendReminders(ctx context.Context, actor Actor, organizationID
 	}, nil
 }
 
+func (s *Service) RegisterPesapalIPN(ctx context.Context, actor Actor, organizationID string, req *RegisterPesapalIPNRequest) (*PesapalIPNResponse, error) {
+	organizationID = strings.TrimSpace(organizationID)
+	if err := assertOrgScope(actor, organizationID); err != nil {
+		return nil, err
+	}
+	if !canMutatePayments(actor.Role) {
+		return nil, apierrors.ErrForbidden
+	}
+	if s.gateway == nil {
+		return nil, apierrors.ErrNotImplemented
+	}
+	url := strings.TrimSpace(req.URL)
+	if url == "" {
+		url = strings.TrimSuffix(s.appBaseURL, "/") + "/api/v1/payments/ipn/pesapal"
+	}
+	method := strings.ToUpper(strings.TrimSpace(req.IPNNotificationType))
+	if method == "" {
+		method = s.ipnNotificationType
+	}
+	out, err := s.gateway.RegisterIPN(ctx, url, method)
+	if err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if strings.TrimSpace(out.IPNID) != "" {
+		s.defaultNotificationID = strings.TrimSpace(out.IPNID)
+	}
+	return &PesapalIPNResponse{
+		URL:                            out.URL,
+		IPNID:                          out.IPNID,
+		CreatedDate:                    out.CreatedDate,
+		IPNNotificationTypeDescription: out.IPNNotificationTypeDescription,
+		IPNStatusDescription:           out.IPNStatusDescription,
+		Status:                         out.Status,
+	}, nil
+}
+
+func (s *Service) ListPesapalIPN(ctx context.Context, actor Actor, organizationID string) (*PesapalIPNListResponse, error) {
+	organizationID = strings.TrimSpace(organizationID)
+	if err := assertOrgScope(actor, organizationID); err != nil {
+		return nil, err
+	}
+	if !canReadPayments(actor.Role) {
+		return nil, apierrors.ErrForbidden
+	}
+	if s.gateway == nil {
+		return nil, apierrors.ErrNotImplemented
+	}
+	rows, err := s.gateway.GetIPNList(ctx)
+	if err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	items := make([]PesapalIPNResponse, 0, len(rows))
+	for i := range rows {
+		items = append(items, PesapalIPNResponse{
+			URL:         rows[i].URL,
+			IPNID:       rows[i].IPNID,
+			CreatedDate: rows[i].CreatedDate,
+			Status:      rows[i].Status,
+		})
+	}
+	return &PesapalIPNListResponse{Items: items}, nil
+}
+
+func (s *Service) HandlePesapalIPN(ctx context.Context, req *PesapalIPNCallbackRequest) (*PesapalIPNCallbackResponse, error) {
+	if req == nil {
+		return &PesapalIPNCallbackResponse{Status: "accepted"}, nil
+	}
+	p, err := s.repo.FindByMerchantRefOrTrackingID(ctx, req.OrderMerchantReference, req.OrderTrackingID)
+	if err != nil {
+		return &PesapalIPNCallbackResponse{Status: "accepted"}, nil
+	}
+	rawBytes, _ := json.Marshal(req)
+	callbackRaw := string(rawBytes)
+	providerStatus := strings.TrimSpace(req.OrderNotificationType)
+	next := mapProviderNotificationToPaymentStatus(providerStatus, p.Status)
+	if err := s.repo.UpdateFromIPN(ctx, p.ID, next, providerStatus, callbackRaw); err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	return &PesapalIPNCallbackResponse{Status: "accepted"}, nil
+}
+
+func (s *Service) GetTransactionStatus(ctx context.Context, actor Actor, organizationID, orderTrackingID string) (*PesapalTransactionStatusResponse, error) {
+	organizationID = strings.TrimSpace(organizationID)
+	if err := assertOrgScope(actor, organizationID); err != nil {
+		return nil, err
+	}
+	if !canReadPayments(actor.Role) {
+		return nil, apierrors.ErrForbidden
+	}
+	if s.gateway == nil {
+		return nil, apierrors.ErrNotImplemented
+	}
+	out, err := s.gateway.GetTransactionStatus(ctx, orderTrackingID)
+	if err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	if p, err := s.repo.FindByMerchantRefOrTrackingID(ctx, out.MerchantReference, strings.TrimSpace(orderTrackingID)); err == nil && p != nil {
+		next := mapProviderStatusCodeToPaymentStatus(out.StatusCode, out.PaymentStatusDescription, p.Status)
+		raw, _ := json.Marshal(out)
+		_ = s.repo.UpdateFromIPN(ctx, p.ID, next, strings.TrimSpace(out.PaymentStatusDescription), string(raw))
+		_ = s.repo.UpdateGatewayState(ctx, p.OrganizationID, p.ID, "pesapal", out.MerchantReference, strings.TrimSpace(orderTrackingID), strings.TrimSpace(out.PaymentStatusDescription))
+	}
+	return &PesapalTransactionStatusResponse{
+		OrderTrackingID:          strings.TrimSpace(orderTrackingID),
+		PaymentMethod:            out.PaymentMethod,
+		Amount:                   out.Amount,
+		CreatedDate:              out.CreatedDate,
+		ConfirmationCode:         out.ConfirmationCode,
+		PaymentStatusDescription: out.PaymentStatusDescription,
+		Description:              out.Description,
+		PaymentAccount:           out.PaymentAccount,
+		CallbackURL:              out.CallbackURL,
+		StatusCode:               out.StatusCode,
+		MerchantReference:        out.MerchantReference,
+		PaymentStatusCode:        out.PaymentStatusCode,
+		Currency:                 out.Currency,
+		Status:                   out.Status,
+		Message:                  out.Message,
+	}, nil
+}
+
 func assertOrgScope(actor Actor, organizationID string) error {
 	if strings.EqualFold(strings.TrimSpace(actor.Role), middleware.RoleAdmin) {
 		return nil
@@ -322,5 +462,33 @@ func canMutatePayments(role string) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func mapProviderNotificationToPaymentStatus(notification string, current PaymentStatus) PaymentStatus {
+	v := strings.ToLower(strings.TrimSpace(notification))
+	switch v {
+	case "completed", "paid", "success", "ipn_paid":
+		return PaymentStatusCompleted
+	case "failed", "rejected", "cancelled", "void":
+		return PaymentStatusFailed
+	default:
+		if current != "" {
+			return current
+		}
+		return PaymentStatusPending
+	}
+}
+
+func mapProviderStatusCodeToPaymentStatus(statusCode int, description string, current PaymentStatus) PaymentStatus {
+	switch statusCode {
+	case 1:
+		return PaymentStatusCompleted
+	case 2, 3:
+		return PaymentStatusFailed
+	case 0:
+		return PaymentStatusPending
+	default:
+		return mapProviderNotificationToPaymentStatus(description, current)
 	}
 }

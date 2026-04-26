@@ -75,6 +75,8 @@ func NewRouter(deps *Dependencies) *gin.Engine {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	v1 := r.Group("/api/v1")
+	v1.GET("/payments/ipn/pesapal", deps.Payments.PesapalIPNCallback)
+	v1.POST("/payments/ipn/pesapal", deps.Payments.PesapalIPNCallback)
 
 	// Public auth endpoints (rate-limited).
 	authPublic := v1.Group("/auth")

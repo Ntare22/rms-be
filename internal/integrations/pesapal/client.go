@@ -10,6 +10,9 @@ import (
 type Client interface {
 	RequestToken(ctx context.Context) (string, error)
 	SubmitOrder(ctx context.Context, req SubmitOrderRequest) (*SubmitOrderResponse, error)
+	RegisterIPN(ctx context.Context, url, notificationType string) (*RegisterIPNResponse, error)
+	GetIPNList(ctx context.Context) ([]IPNListItem, error)
+	GetTransactionStatus(ctx context.Context, orderTrackingID string) (*TransactionStatusResponse, error)
 }
 
 // Config controls PesaPal HTTP client wiring.

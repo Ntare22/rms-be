@@ -43,20 +43,24 @@ const (
 //   - FK lease_id -> leases(id); enforce lease.organization_id = payments.organization_id.
 //   - Optional: CHECK (amount_minor > 0).
 type Payment struct {
-	ID             string         `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	OrganizationID string         `gorm:"type:uuid;not null;index" json:"organization_id"`
-	LeaseID        string         `gorm:"type:uuid;not null;index" json:"lease_id"`
-	AmountMinor    int64          `gorm:"not null" json:"amount_minor"`
-	Currency       string         `gorm:"size:3;not null;default:'USD'" json:"currency"`
-	ReceivedAt     time.Time      `gorm:"not null" json:"received_at"`
-	Method         PaymentMethod  `gorm:"size:24;not null" json:"method"`
-	Status         PaymentStatus  `gorm:"size:24;not null;default:pending" json:"status"`
-	ExternalRef    string         `gorm:"size:255" json:"external_ref,omitempty"`
-	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
-	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
-	CreatedBy      *string        `gorm:"type:uuid" json:"created_by,omitempty"`
-	UpdatedBy      *string        `gorm:"type:uuid" json:"updated_by,omitempty"`
+	ID              string         `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
+	OrganizationID  string         `gorm:"type:uuid;not null;index" json:"organization_id"`
+	LeaseID         string         `gorm:"type:uuid;not null;index" json:"lease_id"`
+	AmountMinor     int64          `gorm:"not null" json:"amount_minor"`
+	Currency        string         `gorm:"size:3;not null;default:'USD'" json:"currency"`
+	ReceivedAt      time.Time      `gorm:"not null" json:"received_at"`
+	Method          PaymentMethod  `gorm:"size:24;not null" json:"method"`
+	Status          PaymentStatus  `gorm:"size:24;not null;default:pending" json:"status"`
+	ExternalRef     string         `gorm:"size:255" json:"external_ref,omitempty"`
+	Provider        string         `gorm:"size:32;index" json:"provider,omitempty"`
+	OrderTrackingID string         `gorm:"size:128;index" json:"order_tracking_id,omitempty"`
+	ProviderStatus  string         `gorm:"size:64;index" json:"provider_status,omitempty"`
+	CallbackRaw     string         `gorm:"type:text" json:"callback_raw,omitempty"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`
+	CreatedBy       *string        `gorm:"type:uuid" json:"created_by,omitempty"`
+	UpdatedBy       *string        `gorm:"type:uuid" json:"updated_by,omitempty"`
 }
 
 func (Payment) TableName() string { return "payments" }

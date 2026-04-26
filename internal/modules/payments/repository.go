@@ -60,6 +60,46 @@ func (r *Repository) UpdateExternalRef(ctx context.Context, organizationID, paym
 		Update("external_ref", strings.TrimSpace(externalRef)).Error
 }
 
+func (r *Repository) UpdateGatewayState(ctx context.Context, organizationID, paymentID, provider, externalRef, orderTrackingID, providerStatus string) error {
+	updates := map[string]any{
+		"provider":          strings.TrimSpace(provider),
+		"external_ref":      strings.TrimSpace(externalRef),
+		"order_tracking_id": strings.TrimSpace(orderTrackingID),
+		"provider_status":   strings.TrimSpace(providerStatus),
+	}
+	return r.db.WithContext(ctx).Model(&Payment{}).
+		Where("organization_id = ? AND id = ?", strings.TrimSpace(organizationID), strings.TrimSpace(paymentID)).
+		Updates(updates).Error
+}
+
+func (r *Repository) FindByMerchantRefOrTrackingID(ctx context.Context, merchantRef, orderTrackingID string) (*Payment, error) {
+	var out Payment
+	q := r.db.WithContext(ctx).Model(&Payment{})
+	if strings.TrimSpace(merchantRef) != "" && strings.TrimSpace(orderTrackingID) != "" {
+		q = q.Where("external_ref = ? OR order_tracking_id = ?", strings.TrimSpace(merchantRef), strings.TrimSpace(orderTrackingID))
+	} else if strings.TrimSpace(merchantRef) != "" {
+		q = q.Where("external_ref = ?", strings.TrimSpace(merchantRef))
+	} else if strings.TrimSpace(orderTrackingID) != "" {
+		q = q.Where("order_tracking_id = ?", strings.TrimSpace(orderTrackingID))
+	} else {
+		return nil, gorm.ErrRecordNotFound
+	}
+	if err := q.First(&out).Error; err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (r *Repository) UpdateFromIPN(ctx context.Context, paymentID string, status PaymentStatus, providerStatus, callbackRaw string) error {
+	return r.db.WithContext(ctx).Model(&Payment{}).
+		Where("id = ?", strings.TrimSpace(paymentID)).
+		Updates(map[string]any{
+			"status":          status,
+			"provider_status": strings.TrimSpace(providerStatus),
+			"callback_raw":    strings.TrimSpace(callbackRaw),
+		}).Error
+}
+
 func (r *Repository) GetLeaseScope(ctx context.Context, organizationID, leaseID string) (*leaseScope, error) {
 	var row leaseScope
 	if err := r.db.WithContext(ctx).Table("leases").

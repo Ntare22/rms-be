@@ -224,32 +224,82 @@ ORDER BY collected_minor DESC
 func (r *Repository) ReminderCandidates(ctx context.Context, organizationID string) ([]reminderCandidateRow, error) {
 	var rows []reminderCandidateRow
 	err := r.db.WithContext(ctx).Raw(`
-SELECT c.id as charge_id,
-       c.lease_id,
-       l.tenant_id,
-       COALESCE(NULLIF(TRIM(t.full_name), ''), 'Tenant') as tenant_name,
-       COALESCE(NULLIF(TRIM(t.email), ''), '') as tenant_email,
-       COALESCE(NULLIF(TRIM(t.phone), ''), '') as tenant_phone,
-       c.amount_minor,
-       COALESCE(NULLIF(TRIM(l.currency), ''), 'USD') as currency,
-       c.due_at,
-       CASE
-         WHEN c.due_at < now() - interval '14 day' THEN 'final_notice'
-         WHEN c.due_at < now() - interval '7 day' THEN 'reminder_2'
-         ELSE 'reminder_1'
-       END as suggested_level,
-       CASE
-         WHEN LOWER(COALESCE(NULLIF(TRIM(t.billing_channel), ''), 'email')) = 'sms' THEN 'sms'
-         ELSE 'email'
-       END as channel
-FROM rent_charges c
-JOIN leases l ON l.id = c.lease_id AND l.organization_id = c.organization_id
-JOIN tenants t ON t.id = l.tenant_id AND t.organization_id = c.organization_id
-WHERE c.organization_id = ?
-  AND c.status IN ('scheduled','posted')
-  AND c.due_at <= now() + interval '7 day'
-ORDER BY c.due_at ASC
-`, strings.TrimSpace(organizationID)).Scan(&rows).Error
+WITH charge_candidates AS (
+  SELECT c.id as charge_id,
+         c.lease_id,
+         l.tenant_id,
+         COALESCE(NULLIF(TRIM(t.full_name), ''), 'Tenant') as tenant_name,
+         COALESCE(NULLIF(TRIM(t.email), ''), '') as tenant_email,
+         COALESCE(NULLIF(TRIM(t.phone), ''), '') as tenant_phone,
+         c.amount_minor,
+         COALESCE(NULLIF(TRIM(l.currency), ''), 'USD') as currency,
+         c.due_at,
+         CASE
+           WHEN c.due_at < now() - interval '14 day' THEN 'final_notice'
+           WHEN c.due_at < now() - interval '7 day' THEN 'reminder_2'
+           ELSE 'reminder_1'
+         END as suggested_level,
+         CASE
+           WHEN LOWER(COALESCE(NULLIF(TRIM(t.billing_channel), ''), 'email')) = 'sms' THEN 'sms'
+           ELSE 'email'
+         END as channel
+  FROM rent_charges c
+  JOIN leases l ON l.id = c.lease_id AND l.organization_id = c.organization_id
+  JOIN tenants t ON t.id = l.tenant_id AND t.organization_id = c.organization_id
+  WHERE c.organization_id = ?
+    AND c.status IN ('scheduled','posted')
+    AND c.due_at < date_trunc('month', now()) + interval '1 month'
+),
+lease_due_candidates AS (
+  SELECT l.id as charge_id,
+         l.id as lease_id,
+         l.tenant_id,
+         COALESCE(NULLIF(TRIM(t.full_name), ''), 'Tenant') as tenant_name,
+         COALESCE(NULLIF(TRIM(t.email), ''), '') as tenant_email,
+         COALESCE(NULLIF(TRIM(t.phone), ''), '') as tenant_phone,
+         COALESCE(l.billing_amount_override_minor, l.monthly_rent_amount_minor) as amount_minor,
+         COALESCE(NULLIF(TRIM(l.currency), ''), 'USD') as currency,
+         due.due_at,
+         'reminder_1' as suggested_level,
+         CASE
+           WHEN LOWER(COALESCE(NULLIF(TRIM(t.billing_channel), ''), 'email')) = 'sms' THEN 'sms'
+           ELSE 'email'
+         END as channel
+  FROM leases l
+  JOIN tenants t ON t.id = l.tenant_id AND t.organization_id = l.organization_id
+  JOIN LATERAL (
+    SELECT make_timestamptz(
+             EXTRACT(YEAR FROM now())::int,
+             EXTRACT(MONTH FROM now())::int,
+             LEAST(
+               GREATEST(COALESCE(l.billing_due_day, 1), 1),
+               EXTRACT(DAY FROM (date_trunc('month', now()) + interval '1 month - 1 day'))::int
+             ),
+             0, 0, 0
+           ) as due_at
+  ) due ON true
+  WHERE l.organization_id = ?
+    AND l.status IN ('active', 'pending_approval')
+    AND due.due_at >= date_trunc('month', now())
+    AND due.due_at < date_trunc('month', now()) + interval '1 month'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM rent_charges rc
+      WHERE rc.organization_id = l.organization_id
+        AND rc.lease_id = l.id
+        AND rc.status IN ('scheduled','posted')
+        AND rc.due_at >= date_trunc('month', due.due_at)
+        AND rc.due_at < date_trunc('month', due.due_at) + interval '1 month'
+    )
+)
+SELECT *
+FROM (
+  SELECT * FROM charge_candidates
+  UNION ALL
+  SELECT * FROM lease_due_candidates
+) q
+ORDER BY q.due_at ASC
+`, strings.TrimSpace(organizationID), strings.TrimSpace(organizationID)).Scan(&rows).Error
 	return rows, err
 }
 

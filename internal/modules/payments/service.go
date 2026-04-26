@@ -107,6 +107,11 @@ func (s *Service) Initiate(ctx context.Context, actor Actor, organizationID stri
 	}
 	nextAction := "gateway_pending"
 	if s.gateway != nil {
+		billing := s.defaultBillingAddress(nil)
+		if tenant, err := s.repo.GetTenantBillingProfile(ctx, organizationID, lease.TenantID); err == nil {
+			billing = s.defaultBillingAddress(tenant)
+		}
+		billing = mergeBillingAddressOverride(billing, req.Billing)
 		res, err := s.gateway.SubmitOrder(ctx, pesapal.SubmitOrderRequest{
 			ID:             p.ID,
 			Currency:       p.Currency,
@@ -114,6 +119,7 @@ func (s *Service) Initiate(ctx context.Context, actor Actor, organizationID stri
 			Description:    "Lease payment",
 			CallbackURL:    strings.TrimSuffix(s.appBaseURL, "/") + "/payments/callback",
 			NotificationID: s.defaultNotificationID,
+			BillingAddress: billing,
 		})
 		if err == nil && res != nil {
 			if strings.TrimSpace(res.MerchantRef) != "" {
@@ -490,4 +496,91 @@ func mapProviderStatusCodeToPaymentStatus(statusCode int, description string, cu
 	default:
 		return mapProviderNotificationToPaymentStatus(description, current)
 	}
+}
+
+func (s *Service) defaultBillingAddress(in *tenantBillingProfile) *pesapal.BillingAddress {
+	email := "tenant@example.com"
+	phone := "254700000000"
+	first := "Tenant"
+	last := "Customer"
+	if in != nil {
+		if v := strings.TrimSpace(in.Email); v != "" {
+			email = v
+		}
+		if v := strings.TrimSpace(in.Phone); v != "" {
+			phone = v
+		}
+		if v := strings.TrimSpace(in.FirstName); v != "" {
+			first = v
+		}
+		if v := strings.TrimSpace(in.LastName); v != "" {
+			last = v
+		}
+		if strings.TrimSpace(in.FirstName) == "" && strings.TrimSpace(in.FullName) != "" {
+			parts := strings.Fields(strings.TrimSpace(in.FullName))
+			if len(parts) > 0 {
+				first = parts[0]
+			}
+			if len(parts) > 1 {
+				last = strings.Join(parts[1:], " ")
+			}
+		}
+	}
+	return &pesapal.BillingAddress{
+		EmailAddress: email,
+		PhoneNumber:  phone,
+		CountryCode:  "KE",
+		FirstName:    first,
+		LastName:     last,
+		Line1:        "Nairobi",
+		City:         "Nairobi",
+		State:        "Nairobi",
+		PostalCode:   "00100",
+	}
+}
+
+func mergeBillingAddressOverride(base *pesapal.BillingAddress, in *InitiateBillingAddressRequest) *pesapal.BillingAddress {
+	if base == nil {
+		base = &pesapal.BillingAddress{}
+	}
+	if in == nil {
+		return base
+	}
+	if v := strings.TrimSpace(in.EmailAddress); v != "" {
+		base.EmailAddress = v
+	}
+	if v := strings.TrimSpace(in.PhoneNumber); v != "" {
+		base.PhoneNumber = v
+	}
+	if v := strings.ToUpper(strings.TrimSpace(in.CountryCode)); v != "" {
+		base.CountryCode = v
+	}
+	if v := strings.TrimSpace(in.FirstName); v != "" {
+		base.FirstName = v
+	}
+	if v := strings.TrimSpace(in.MiddleName); v != "" {
+		base.MiddleName = v
+	}
+	if v := strings.TrimSpace(in.LastName); v != "" {
+		base.LastName = v
+	}
+	if v := strings.TrimSpace(in.Line1); v != "" {
+		base.Line1 = v
+	}
+	if v := strings.TrimSpace(in.Line2); v != "" {
+		base.Line2 = v
+	}
+	if v := strings.TrimSpace(in.City); v != "" {
+		base.City = v
+	}
+	if v := strings.TrimSpace(in.State); v != "" {
+		base.State = v
+	}
+	if v := strings.TrimSpace(in.PostalCode); v != "" {
+		base.PostalCode = v
+	}
+	if v := strings.TrimSpace(in.ZipCode); v != "" {
+		base.ZipCode = v
+	}
+	return base
 }

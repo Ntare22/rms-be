@@ -735,11 +735,50 @@ definitions:
         maxLength: 512
         type: string
     type: object
+  payments.InitiateBillingAddressRequest:
+    properties:
+      city:
+        maxLength: 120
+        type: string
+      country_code:
+        type: string
+      email_address:
+        type: string
+      first_name:
+        maxLength: 120
+        type: string
+      last_name:
+        maxLength: 120
+        type: string
+      line_1:
+        maxLength: 255
+        type: string
+      line_2:
+        maxLength: 255
+        type: string
+      middle_name:
+        maxLength: 120
+        type: string
+      phone_number:
+        maxLength: 64
+        type: string
+      postal_code:
+        maxLength: 32
+        type: string
+      state:
+        maxLength: 120
+        type: string
+      zip_code:
+        maxLength: 32
+        type: string
+    type: object
   payments.InitiatePaymentRequest:
     properties:
       amount_minor:
         minimum: 1
         type: integer
+      billing:
+        $ref: '#/definitions/payments.InitiateBillingAddressRequest'
       currency:
         type: string
       lease_id:

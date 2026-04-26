@@ -16,16 +16,29 @@ type RequestTokenResponse struct {
 
 // SubmitOrderRequest is provider-neutral order payload for checkout creation.
 type SubmitOrderRequest struct {
-	ID               string `json:"id"`
-	Currency         string `json:"currency"`
-	Amount           int64  `json:"amount"`
-	Description      string `json:"description"`
-	CallbackURL      string `json:"callback_url"`
-	NotificationID   string `json:"notification_id"`
-	BillingEmail     string `json:"billing_email,omitempty"`
-	BillingPhone     string `json:"billing_phone,omitempty"`
-	BillingFirstName string `json:"billing_first_name,omitempty"`
-	BillingLastName  string `json:"billing_last_name,omitempty"`
+	ID             string          `json:"id"`
+	Currency       string          `json:"currency"`
+	Amount         int64           `json:"amount"`
+	Description    string          `json:"description"`
+	CallbackURL    string          `json:"callback_url"`
+	NotificationID string          `json:"notification_id"`
+	BillingAddress *BillingAddress `json:"billing_address,omitempty"`
+}
+
+// BillingAddress is the billing contact/address block required by Pesapal SubmitOrderRequest.
+type BillingAddress struct {
+	EmailAddress string `json:"email_address,omitempty"`
+	PhoneNumber  string `json:"phone_number,omitempty"`
+	CountryCode  string `json:"country_code,omitempty"`
+	FirstName    string `json:"first_name,omitempty"`
+	MiddleName   string `json:"middle_name,omitempty"`
+	LastName     string `json:"last_name,omitempty"`
+	Line1        string `json:"line_1,omitempty"`
+	Line2        string `json:"line_2,omitempty"`
+	City         string `json:"city,omitempty"`
+	State        string `json:"state,omitempty"`
+	PostalCode   string `json:"postal_code,omitempty"`
+	ZipCode      string `json:"zip_code,omitempty"`
 }
 
 // SubmitOrderResponse returns redirect/reference details.

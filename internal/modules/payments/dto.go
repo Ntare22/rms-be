@@ -4,10 +4,27 @@ import "time"
 
 // InitiatePaymentRequest creates a placeholder payment intent.
 type InitiatePaymentRequest struct {
-	LeaseID     string `json:"lease_id" binding:"required,uuid"`
-	AmountMinor int64  `json:"amount_minor" binding:"required,min=1"`
-	Currency    string `json:"currency" binding:"omitempty,len=3"`
-	Method      string `json:"method" binding:"omitempty,oneof=ach card cash check wire other" example:"card"`
+	LeaseID     string                         `json:"lease_id" binding:"required,uuid"`
+	AmountMinor int64                          `json:"amount_minor" binding:"required,min=1"`
+	Currency    string                         `json:"currency" binding:"omitempty,len=3"`
+	Method      string                         `json:"method" binding:"omitempty,oneof=ach card cash check wire other" example:"card"`
+	Billing     *InitiateBillingAddressRequest `json:"billing,omitempty"`
+}
+
+// InitiateBillingAddressRequest allows overriding the default Pesapal billing block.
+type InitiateBillingAddressRequest struct {
+	EmailAddress string `json:"email_address" binding:"omitempty,email"`
+	PhoneNumber  string `json:"phone_number" binding:"omitempty,max=64"`
+	CountryCode  string `json:"country_code" binding:"omitempty,len=2"`
+	FirstName    string `json:"first_name" binding:"omitempty,max=120"`
+	MiddleName   string `json:"middle_name" binding:"omitempty,max=120"`
+	LastName     string `json:"last_name" binding:"omitempty,max=120"`
+	Line1        string `json:"line_1" binding:"omitempty,max=255"`
+	Line2        string `json:"line_2" binding:"omitempty,max=255"`
+	City         string `json:"city" binding:"omitempty,max=120"`
+	State        string `json:"state" binding:"omitempty,max=120"`
+	PostalCode   string `json:"postal_code" binding:"omitempty,max=32"`
+	ZipCode      string `json:"zip_code" binding:"omitempty,max=32"`
 }
 
 // PaymentResponse is the API projection for initiated payments.

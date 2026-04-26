@@ -4619,6 +4619,57 @@ const docTemplate = `{
                 }
             }
         },
+        "payments.InitiateBillingAddressRequest": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string",
+                    "maxLength": 120
+                },
+                "country_code": {
+                    "type": "string"
+                },
+                "email_address": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string",
+                    "maxLength": 120
+                },
+                "last_name": {
+                    "type": "string",
+                    "maxLength": 120
+                },
+                "line_1": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "line_2": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "middle_name": {
+                    "type": "string",
+                    "maxLength": 120
+                },
+                "phone_number": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "postal_code": {
+                    "type": "string",
+                    "maxLength": 32
+                },
+                "state": {
+                    "type": "string",
+                    "maxLength": 120
+                },
+                "zip_code": {
+                    "type": "string",
+                    "maxLength": 32
+                }
+            }
+        },
         "payments.InitiatePaymentRequest": {
             "type": "object",
             "required": [
@@ -4629,6 +4680,9 @@ const docTemplate = `{
                 "amount_minor": {
                     "type": "integer",
                     "minimum": 1
+                },
+                "billing": {
+                    "$ref": "#/definitions/payments.InitiateBillingAddressRequest"
                 },
                 "currency": {
                     "type": "string"

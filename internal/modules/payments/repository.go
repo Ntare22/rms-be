@@ -14,6 +14,14 @@ type leaseScope struct {
 	UnitID   string `gorm:"column:unit_id"`
 }
 
+type tenantBillingProfile struct {
+	FirstName string `gorm:"column:first_name"`
+	LastName  string `gorm:"column:last_name"`
+	FullName  string `gorm:"column:full_name"`
+	Email     string `gorm:"column:email"`
+	Phone     string `gorm:"column:phone"`
+}
+
 type summaryRow struct {
 	Month               string `gorm:"column:month"`
 	CollectedMinor      int64  `gorm:"column:collected_minor"`
@@ -105,6 +113,17 @@ func (r *Repository) GetLeaseScope(ctx context.Context, organizationID, leaseID 
 	if err := r.db.WithContext(ctx).Table("leases").
 		Select("id, tenant_id, unit_id").
 		Where("organization_id = ? AND id = ?", strings.TrimSpace(organizationID), strings.TrimSpace(leaseID)).
+		First(&row).Error; err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
+func (r *Repository) GetTenantBillingProfile(ctx context.Context, organizationID, tenantID string) (*tenantBillingProfile, error) {
+	var row tenantBillingProfile
+	if err := r.db.WithContext(ctx).Table("tenants").
+		Select("first_name, last_name, full_name, email, phone").
+		Where("organization_id = ? AND id = ?", strings.TrimSpace(organizationID), strings.TrimSpace(tenantID)).
 		First(&row).Error; err != nil {
 		return nil, err
 	}

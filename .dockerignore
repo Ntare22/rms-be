@@ -1,0 +1,12 @@
+.git
+.github
+.cursor
+bin
+tmp
+node_modules
+coverage
+dist
+vendor
+*.log
+.env
+docs

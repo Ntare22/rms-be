@@ -148,6 +148,82 @@ func (s *Service) Initiate(ctx context.Context, actor Actor, organizationID stri
 	}, nil
 }
 
+// RecordManual records an already-received offline payment without gateway submission.
+func (s *Service) RecordManual(ctx context.Context, actor Actor, organizationID string, req *RecordManualPaymentRequest) (*PaymentResponse, error) {
+	organizationID = strings.TrimSpace(organizationID)
+	if err := assertOrgScope(actor, organizationID); err != nil {
+		return nil, err
+	}
+	if !canMutatePayments(actor.Role) {
+		return nil, apierrors.ErrForbidden
+	}
+	lease, err := s.repo.GetLeaseScope(ctx, organizationID, req.LeaseID)
+	if err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrNotFound)
+	}
+	if strings.EqualFold(strings.TrimSpace(actor.Role), middleware.RoleManager) {
+		ids, err := s.repo.ListManagerBuildingIDs(ctx, organizationID, actor.UserID)
+		if err != nil {
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+		ok, err := s.repo.UnitInBuildings(ctx, organizationID, lease.UnitID, ids)
+		if err != nil {
+			return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+		}
+		if !ok {
+			return nil, apierrors.ErrForbidden
+		}
+	}
+
+	method := PaymentMethod(strings.TrimSpace(strings.ToLower(req.Method)))
+	if method == "" {
+		method = PaymentMethodCash
+	}
+	cur := strings.ToUpper(strings.TrimSpace(req.Currency))
+	if cur == "" {
+		cur = "USD"
+	}
+	receivedAt := time.Now().UTC()
+	if req.ReceivedAt != nil && !req.ReceivedAt.IsZero() {
+		receivedAt = req.ReceivedAt.UTC()
+	}
+	externalRef := strings.TrimSpace(req.ExternalRef)
+	if externalRef == "" {
+		externalRef = "manual_" + time.Now().UTC().Format("20060102150405")
+	}
+
+	p := &Payment{
+		OrganizationID: organizationID,
+		LeaseID:        lease.ID,
+		AmountMinor:    req.AmountMinor,
+		Currency:       cur,
+		Method:         method,
+		Status:         PaymentStatusCompleted,
+		ReceivedAt:     receivedAt,
+		ExternalRef:    externalRef,
+		Provider:       "manual",
+		ProviderStatus: "recorded",
+	}
+	if strings.TrimSpace(actor.UserID) != "" {
+		p.CreatedBy = &actor.UserID
+		p.UpdatedBy = &actor.UserID
+	}
+	if err := s.repo.Create(ctx, p); err != nil {
+		return nil, apierrors.Wrap(err, apierrors.ErrInternal)
+	}
+	return &PaymentResponse{
+		ID:          p.ID,
+		LeaseID:     p.LeaseID,
+		AmountMinor: p.AmountMinor,
+		Currency:    p.Currency,
+		Method:      string(p.Method),
+		Status:      string(p.Status),
+		ExternalRef: p.ExternalRef,
+		NextAction:  "recorded",
+		CreatedAt:   p.CreatedAt,
+	}, nil
+}
+
 func (s *Service) Summary(ctx context.Context, actor Actor, organizationID string, months int) (*PaymentSummaryResponse, error) {
 	organizationID = strings.TrimSpace(organizationID)
 	if err := assertOrgScope(actor, organizationID); err != nil {

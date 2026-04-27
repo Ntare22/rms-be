@@ -18,6 +18,7 @@ import (
 	"rms-be/internal/modules/leases"
 	"rms-be/internal/modules/organizations"
 	"rms-be/internal/modules/payments"
+	"rms-be/internal/modules/sms"
 	"rms-be/internal/modules/tenants"
 	"rms-be/internal/modules/units"
 	"rms-be/internal/modules/users"
@@ -78,6 +79,7 @@ func NewRouter(deps *Dependencies) *gin.Engine {
 	v1.GET("/payments/ipn/pesapal", deps.Payments.PesapalIPNCallback)
 	v1.POST("/payments/ipn/pesapal", deps.Payments.PesapalIPNCallback)
 	payments.RegisterPublicIntegrationRoutes(v1.Group("/payments"), deps.Payments)
+	sms.RegisterPublicRoutes(v1.Group("/sms"), deps.SMS, deps.Config.SMSSendRPM, deps.Config.SMSBulkSendRPM)
 
 	// Public auth endpoints (rate-limited).
 	authPublic := v1.Group("/auth")

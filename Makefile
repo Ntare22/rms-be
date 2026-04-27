@@ -23,7 +23,7 @@ itest:
 	@go test ./internal/database -count=1
 
 swagger:
-	@swag init -g main.go -d ./cmd/api,./internal/app,./internal/modules/auth,./internal/modules/organizations,./internal/modules/users,./internal/modules/buildings,./internal/modules/units,./internal/modules/tenants,./internal/modules/leases,./internal/modules/payments -o ./docs --parseDependency --parseInternal
+	@swag init -g main.go -d ./cmd/api,./internal/app,./internal/modules/auth,./internal/modules/organizations,./internal/modules/users,./internal/modules/buildings,./internal/modules/units,./internal/modules/tenants,./internal/modules/leases,./internal/modules/payments,./internal/modules/sms -o ./docs --parseDependency --parseInternal
 
 clean:
 	@rm -rf $(BIN_DIR) main

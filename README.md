@@ -17,6 +17,28 @@ make docker-up
 make run
 ```
 
+## Run with Docker (API + Postgres)
+
+```bash
+cp .env.example .env
+docker compose up --build -d
+```
+
+- API: `http://localhost:8080`
+- Swagger: `http://localhost:8080/swagger/index.html`
+
+Optional worker:
+
+```bash
+docker compose --profile worker up -d
+```
+
+Stop services:
+
+```bash
+docker compose down
+```
+
 - **Swagger UI**: `http://localhost:8080/swagger/index.html`
 - **Liveness**: `GET /health/live` — returns `503` with `shutting_down` once graceful shutdown starts.
 - **Readiness**: `GET /health/ready` — PostgreSQL ping.

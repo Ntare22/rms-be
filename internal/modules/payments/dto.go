@@ -11,6 +11,16 @@ type InitiatePaymentRequest struct {
 	Billing     *InitiateBillingAddressRequest `json:"billing,omitempty"`
 }
 
+// RecordManualPaymentRequest records an offline/late payment directly.
+type RecordManualPaymentRequest struct {
+	LeaseID     string     `json:"lease_id" binding:"required,uuid"`
+	AmountMinor int64      `json:"amount_minor" binding:"required,min=1"`
+	Currency    string     `json:"currency" binding:"omitempty,len=3"`
+	Method      string     `json:"method" binding:"required,oneof=ach card cash check wire other" example:"cash"`
+	ExternalRef string     `json:"external_ref" binding:"omitempty,max=255"`
+	ReceivedAt  *time.Time `json:"received_at,omitempty"`
+}
+
 // InitiateBillingAddressRequest allows overriding the default Pesapal billing block.
 type InitiateBillingAddressRequest struct {
 	EmailAddress string `json:"email_address" binding:"omitempty,email"`

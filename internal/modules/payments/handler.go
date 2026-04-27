@@ -68,6 +68,42 @@ func (h *Handler) Initiate(c *gin.Context) {
 	response.Created(c, out)
 }
 
+// RecordManual godoc
+//
+//	@Summary		Record manual payment
+//	@Description	Records an offline/manual payment for a lease (e.g., late cash/bank payment).
+//	@Tags			payments
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path	string						true	"Organization ID"	Format(uuid)
+//	@Param			body	body	RecordManualPaymentRequest	true	"Manual payment payload"
+//	@Success		201		{object}	response.Envelope[PaymentResponse]
+//	@Failure		400		{object}	response.ErrorBody
+//	@Failure		401		{object}	response.ErrorBody
+//	@Failure		403		{object}	response.ErrorBody
+//	@Failure		404		{object}	response.ErrorBody
+//	@Failure		500		{object}	response.ErrorBody
+//	@Router			/api/v1/organizations/{id}/payments/manual [post]
+func (h *Handler) RecordManual(c *gin.Context) {
+	actor, err := actorFromContext(c)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	var req RecordManualPaymentRequest
+	if err := validator.BindJSON(c, &req); err != nil {
+		response.Error(c, err)
+		return
+	}
+	out, err := h.svc.RecordManual(c.Request.Context(), actor, c.Param("id"), &req)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Created(c, out)
+}
+
 // Summary godoc
 //
 //	@Summary		Payments summary

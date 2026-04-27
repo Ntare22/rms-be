@@ -21,6 +21,12 @@ type ipLimiterEntry struct {
 // AuthLoginRateLimiter returns middleware that rate-limits per client IP (auth/login and auth/register).
 // rpm <= 0 disables limiting.
 func AuthLoginRateLimiter(rpm int) gin.HandlerFunc {
+	return IPRateLimiter(rpm, max(5, rpm/6))
+}
+
+// IPRateLimiter returns middleware that rate-limits per client IP.
+// rpm <= 0 disables limiting.
+func IPRateLimiter(rpm int, burst int) gin.HandlerFunc {
 	if rpm <= 0 {
 		return func(c *gin.Context) { c.Next() }
 	}
@@ -28,7 +34,9 @@ func AuthLoginRateLimiter(rpm int) gin.HandlerFunc {
 	var mu sync.Mutex
 	ips := make(map[string]*ipLimiterEntry)
 	limit := rate.Limit(float64(rpm) / 60.0)
-	burst := max(5, rpm/6)
+	if burst <= 0 {
+		burst = max(5, rpm/6)
+	}
 	if burst < 1 {
 		burst = 1
 	}

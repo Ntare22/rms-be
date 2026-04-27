@@ -10,6 +10,7 @@ import (
 	"rms-be/internal/api/security"
 	"rms-be/internal/config"
 	"rms-be/internal/database"
+	"rms-be/internal/integrations/egosms"
 	"rms-be/internal/integrations/pesapal"
 	"rms-be/internal/modules/auth"
 	"rms-be/internal/modules/buildings"
@@ -17,6 +18,7 @@ import (
 	"rms-be/internal/modules/notifications"
 	"rms-be/internal/modules/organizations"
 	"rms-be/internal/modules/payments"
+	"rms-be/internal/modules/sms"
 	"rms-be/internal/modules/tenants"
 	"rms-be/internal/modules/units"
 	"rms-be/internal/modules/users"
@@ -39,6 +41,7 @@ type Dependencies struct {
 	Tenants        *tenants.Handler
 	Leases         *leases.Handler
 	Payments       *payments.Handler
+	SMS            *sms.Handler
 
 	shuttingDown atomic.Bool
 }
@@ -112,6 +115,17 @@ func NewDependencies(cfg *config.Config, log logger.Logger, db database.DB, clk 
 	})
 	paymentSvc := payments.NewService(paymentRepo, pesaClient, cfg.AppBaseURL, cfg.PesaPalIPNID, cfg.PesaPalIPNNotificationType)
 	paymentHandler := payments.NewHandler(paymentSvc)
+	egoClient := egosms.NewClient(egosms.Config{
+		BaseURL:   cfg.EgoSMSBaseURL,
+		Username:  cfg.EgoSMSUsername,
+		Password:  cfg.EgoSMSPassword,
+		SenderID:  cfg.EgoSMSSenderID,
+		Timeout:   cfg.EgoSMSTimeout,
+		MaxRetries: 3,
+		Debug:     cfg.EgoSMSDebug,
+	})
+	smsSvc := sms.NewService(egoClient, log, cfg.EgoSMSSenderID)
+	smsHandler := sms.NewHandler(smsSvc)
 
 	return &Dependencies{
 		Config:         cfg,
@@ -128,6 +142,7 @@ func NewDependencies(cfg *config.Config, log logger.Logger, db database.DB, clk 
 		Tenants:        tntHandler,
 		Leases:         leaseHandler,
 		Payments:       paymentHandler,
+		SMS:            smsHandler,
 	}, nil
 }
 

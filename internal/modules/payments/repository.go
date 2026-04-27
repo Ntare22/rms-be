@@ -247,7 +247,7 @@ WITH charge_candidates AS (
   JOIN leases l ON l.id = c.lease_id AND l.organization_id = c.organization_id
   JOIN tenants t ON t.id = l.tenant_id AND t.organization_id = c.organization_id
   WHERE c.organization_id = ?
-    AND c.status IN ('scheduled','posted')
+    AND LOWER(COALESCE(NULLIF(TRIM(c.status), ''), 'scheduled')) IN ('scheduled','posted','pending','unpaid')
     AND c.due_at < date_trunc('month', now()) + interval '1 month'
 ),
 lease_due_candidates AS (
@@ -287,7 +287,7 @@ lease_due_candidates AS (
       FROM rent_charges rc
       WHERE rc.organization_id = l.organization_id
         AND rc.lease_id = l.id
-        AND rc.status IN ('scheduled','posted')
+        AND LOWER(COALESCE(NULLIF(TRIM(rc.status), ''), 'scheduled')) IN ('scheduled','posted','pending','unpaid')
         AND rc.due_at >= date_trunc('month', due.due_at)
         AND rc.due_at < date_trunc('month', due.due_at) + interval '1 month'
     )

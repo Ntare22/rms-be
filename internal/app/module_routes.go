@@ -8,6 +8,7 @@ import "github.com/gin-gonic/gin"
 func registerAPIModuleRouteGroups(v1 *gin.RouterGroup) {
 	_ = v1.Group("/charges")
 	_ = v1.Group("/payments")
+	_ = v1.Group("/sms")
 	_ = v1.Group("/reports")
 	_ = v1.Group("/notifications")
 	_ = v1.Group("/audit-logs")

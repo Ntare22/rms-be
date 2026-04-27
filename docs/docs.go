@@ -2422,6 +2422,83 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/organizations/{id}/payments/manual": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records an offline/manual payment for a lease (e.g., late cash/bank payment).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Record manual payment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Organization ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Manual payment payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/payments.RecordManualPaymentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-payments_PaymentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/organizations/{id}/payments/method-split": {
             "get": {
                 "security": [
@@ -3582,6 +3659,212 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sms/bulk-send": {
+            "post": {
+                "description": "Sends the same message to multiple recipients.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sms"
+                ],
+                "summary": "Bulk send SMS",
+                "parameters": [
+                    {
+                        "description": "Bulk SMS payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sms.BulkSendSMSRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-sms_BulkSendSMSResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sms/health": {
+            "get": {
+                "description": "Checks EGO SMS provider connectivity and credentials.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sms"
+                ],
+                "summary": "SMS provider health",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-sms_SMSHealthResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sms/send": {
+            "post": {
+                "description": "Sends a single SMS message through EGO SMS.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sms"
+                ],
+                "summary": "Send single SMS",
+                "parameters": [
+                    {
+                        "description": "Single SMS payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sms.SendSMSRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-sms_SendSMSResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sms/send-template": {
+            "post": {
+                "description": "Renders a message template and sends SMS.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sms"
+                ],
+                "summary": "Send template SMS",
+                "parameters": [
+                    {
+                        "description": "Template SMS payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sms.SendTemplateSMSRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-sms_SendSMSResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorBody"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorBody"
                         }
@@ -4891,6 +5174,45 @@ const docTemplate = `{
                 }
             }
         },
+        "payments.RecordManualPaymentRequest": {
+            "type": "object",
+            "required": [
+                "amount_minor",
+                "lease_id",
+                "method"
+            ],
+            "properties": {
+                "amount_minor": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "external_ref": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "lease_id": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string",
+                    "enum": [
+                        "ach",
+                        "card",
+                        "cash",
+                        "check",
+                        "wire",
+                        "other"
+                    ],
+                    "example": "cash"
+                },
+                "received_at": {
+                    "type": "string"
+                }
+            }
+        },
         "payments.RegisterPesapalIPNRequest": {
             "type": "object",
             "properties": {
@@ -5240,6 +5562,30 @@ const docTemplate = `{
                 }
             }
         },
+        "response.Envelope-sms_BulkSendSMSResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/sms.BulkSendSMSResponse"
+                }
+            }
+        },
+        "response.Envelope-sms_SMSHealthResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/sms.SMSHealthResponse"
+                }
+            }
+        },
+        "response.Envelope-sms_SendSMSResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/sms.SendSMSResponse"
+                }
+            }
+        },
         "response.Envelope-tenants_TenantListResponse": {
             "type": "object",
             "properties": {
@@ -5307,6 +5653,164 @@ const docTemplate = `{
                 },
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "sms.BulkSendSMSRequest": {
+            "type": "object",
+            "required": [
+                "message",
+                "recipients"
+            ],
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "maxLength": 612,
+                    "minLength": 1
+                },
+                "recipients": {
+                    "type": "array",
+                    "maxItems": 500,
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "reference": {
+                    "type": "string",
+                    "maxLength": 128
+                },
+                "senderId": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "minLength": 3
+                }
+            }
+        },
+        "sms.BulkSendSMSResponse": {
+            "type": "object",
+            "properties": {
+                "failed": {
+                    "type": "integer"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sms.SMSSendItemResult"
+                    }
+                },
+                "sent": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "sms.SMSHealthResponse": {
+            "type": "object",
+            "properties": {
+                "checkedAt": {
+                    "type": "string"
+                },
+                "healthy": {
+                    "type": "boolean"
+                },
+                "providerMessage": {
+                    "type": "string"
+                },
+                "providerStatusCode": {
+                    "type": "integer"
+                }
+            }
+        },
+        "sms.SMSSendItemResult": {
+            "type": "object",
+            "properties": {
+                "messageId": {
+                    "type": "string"
+                },
+                "providerMessage": {
+                    "type": "string"
+                },
+                "providerStatusCode": {
+                    "type": "integer"
+                },
+                "referenceId": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "to": {
+                    "type": "string"
+                }
+            }
+        },
+        "sms.SendSMSRequest": {
+            "type": "object",
+            "required": [
+                "message",
+                "to"
+            ],
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "maxLength": 612,
+                    "minLength": 1
+                },
+                "reference": {
+                    "type": "string",
+                    "maxLength": 128
+                },
+                "senderId": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "minLength": 3
+                },
+                "to": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "minLength": 8
+                }
+            }
+        },
+        "sms.SendSMSResponse": {
+            "type": "object",
+            "properties": {
+                "item": {
+                    "$ref": "#/definitions/sms.SMSSendItemResult"
+                }
+            }
+        },
+        "sms.SendTemplateSMSRequest": {
+            "type": "object",
+            "required": [
+                "template",
+                "to",
+                "variables"
+            ],
+            "properties": {
+                "senderId": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "minLength": 3
+                },
+                "template": {
+                    "type": "string",
+                    "maxLength": 612,
+                    "minLength": 1
+                },
+                "to": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "minLength": 8
+                },
+                "variables": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 }
             }
         },

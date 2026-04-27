@@ -919,6 +919,35 @@ definitions:
       status_code:
         type: integer
     type: object
+  payments.RecordManualPaymentRequest:
+    properties:
+      amount_minor:
+        minimum: 1
+        type: integer
+      currency:
+        type: string
+      external_ref:
+        maxLength: 255
+        type: string
+      lease_id:
+        type: string
+      method:
+        enum:
+        - ach
+        - card
+        - cash
+        - check
+        - wire
+        - other
+        example: cash
+        type: string
+      received_at:
+        type: string
+    required:
+    - amount_minor
+    - lease_id
+    - method
+    type: object
   payments.RegisterPesapalIPNRequest:
     properties:
       ipn_notification_type:
@@ -1144,6 +1173,21 @@ definitions:
       data:
         $ref: '#/definitions/payments.SendRemindersResponse'
     type: object
+  response.Envelope-sms_BulkSendSMSResponse:
+    properties:
+      data:
+        $ref: '#/definitions/sms.BulkSendSMSResponse'
+    type: object
+  response.Envelope-sms_SMSHealthResponse:
+    properties:
+      data:
+        $ref: '#/definitions/sms.SMSHealthResponse'
+    type: object
+  response.Envelope-sms_SendSMSResponse:
+    properties:
+      data:
+        $ref: '#/definitions/sms.SendSMSResponse'
+    type: object
   response.Envelope-tenants_TenantListResponse:
     properties:
       data:
@@ -1187,6 +1231,117 @@ definitions:
         type: string
       message:
         type: string
+    type: object
+  sms.BulkSendSMSRequest:
+    properties:
+      message:
+        maxLength: 612
+        minLength: 1
+        type: string
+      recipients:
+        items:
+          type: string
+        maxItems: 500
+        minItems: 1
+        type: array
+      reference:
+        maxLength: 128
+        type: string
+      senderId:
+        maxLength: 32
+        minLength: 3
+        type: string
+    required:
+    - message
+    - recipients
+    type: object
+  sms.BulkSendSMSResponse:
+    properties:
+      failed:
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/sms.SMSSendItemResult'
+        type: array
+      sent:
+        type: integer
+      total:
+        type: integer
+    type: object
+  sms.SMSHealthResponse:
+    properties:
+      checkedAt:
+        type: string
+      healthy:
+        type: boolean
+      providerMessage:
+        type: string
+      providerStatusCode:
+        type: integer
+    type: object
+  sms.SMSSendItemResult:
+    properties:
+      messageId:
+        type: string
+      providerMessage:
+        type: string
+      providerStatusCode:
+        type: integer
+      referenceId:
+        type: string
+      success:
+        type: boolean
+      to:
+        type: string
+    type: object
+  sms.SendSMSRequest:
+    properties:
+      message:
+        maxLength: 612
+        minLength: 1
+        type: string
+      reference:
+        maxLength: 128
+        type: string
+      senderId:
+        maxLength: 32
+        minLength: 3
+        type: string
+      to:
+        maxLength: 32
+        minLength: 8
+        type: string
+    required:
+    - message
+    - to
+    type: object
+  sms.SendSMSResponse:
+    properties:
+      item:
+        $ref: '#/definitions/sms.SMSSendItemResult'
+    type: object
+  sms.SendTemplateSMSRequest:
+    properties:
+      senderId:
+        maxLength: 32
+        minLength: 3
+        type: string
+      template:
+        maxLength: 612
+        minLength: 1
+        type: string
+      to:
+        maxLength: 32
+        minLength: 8
+        type: string
+      variables:
+        additionalProperties:
+          type: string
+        type: object
+    required:
+    - template
+    - to
+    - variables
     type: object
   tenants.CreateTenantRequest:
     properties:
@@ -3287,6 +3442,57 @@ paths:
       summary: Initiate payment
       tags:
       - payments
+  /api/v1/organizations/{id}/payments/manual:
+    post:
+      consumes:
+      - application/json
+      description: Records an offline/manual payment for a lease (e.g., late cash/bank
+        payment).
+      parameters:
+      - description: Organization ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Manual payment payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/payments.RecordManualPaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope-payments_PaymentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      security:
+      - BearerAuth: []
+      summary: Record manual payment
+      tags:
+      - payments
   /api/v1/organizations/{id}/payments/method-split:
     get:
       description: Returns collected totals grouped by payment method.
@@ -4077,6 +4283,141 @@ paths:
       summary: Check Pesapal transaction status
       tags:
       - payments
+  /api/v1/sms/bulk-send:
+    post:
+      consumes:
+      - application/json
+      description: Sends the same message to multiple recipients.
+      parameters:
+      - description: Bulk SMS payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/sms.BulkSendSMSRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-sms_BulkSendSMSResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      summary: Bulk send SMS
+      tags:
+      - sms
+  /api/v1/sms/health:
+    get:
+      description: Checks EGO SMS provider connectivity and credentials.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-sms_SMSHealthResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      summary: SMS provider health
+      tags:
+      - sms
+  /api/v1/sms/send:
+    post:
+      consumes:
+      - application/json
+      description: Sends a single SMS message through EGO SMS.
+      parameters:
+      - description: Single SMS payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/sms.SendSMSRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-sms_SendSMSResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      summary: Send single SMS
+      tags:
+      - sms
+  /api/v1/sms/send-template:
+    post:
+      consumes:
+      - application/json
+      description: Renders a message template and sends SMS.
+      parameters:
+      - description: Template SMS payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/sms.SendTemplateSMSRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-sms_SendSMSResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+        "504":
+          description: Gateway Timeout
+          schema:
+            $ref: '#/definitions/response.ErrorBody'
+      summary: Send template SMS
+      tags:
+      - sms
 securityDefinitions:
   BearerAuth:
     in: header

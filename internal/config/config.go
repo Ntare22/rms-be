@@ -50,6 +50,15 @@ type Config struct {
 	PesaPalTimeout             time.Duration
 	PesaPalDebug               bool
 
+	EgoSMSBaseURL   string
+	EgoSMSUsername  string
+	EgoSMSPassword  string
+	EgoSMSSenderID  string
+	EgoSMSTimeout   time.Duration
+	EgoSMSDebug     bool
+	SMSSendRPM      int
+	SMSBulkSendRPM  int
+
 	SMSProvider string
 	SMSAPIKey   string
 
@@ -116,6 +125,22 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid PESAPAL_DEBUG")
 	}
+	egoSMSTimeoutMS, err := strconv.Atoi(getEnv("EGO_SMS_TIMEOUT_MS", "10000"))
+	if err != nil || egoSMSTimeoutMS <= 0 {
+		return nil, fmt.Errorf("invalid EGO_SMS_TIMEOUT_MS")
+	}
+	egoSMSDebug, err := strconv.ParseBool(getEnv("EGO_SMS_DEBUG", "false"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid EGO_SMS_DEBUG")
+	}
+	smsSendRPM, err := strconv.Atoi(getEnv("RATE_LIMIT_SMS_SEND_RPM", "30"))
+	if err != nil || smsSendRPM < 0 {
+		return nil, fmt.Errorf("invalid RATE_LIMIT_SMS_SEND_RPM")
+	}
+	smsBulkRPM, err := strconv.Atoi(getEnv("RATE_LIMIT_SMS_BULK_SEND_RPM", "5"))
+	if err != nil || smsBulkRPM < 0 {
+		return nil, fmt.Errorf("invalid RATE_LIMIT_SMS_BULK_SEND_RPM")
+	}
 	inviteTemplateID, err := parseInt64Env("MAILJET_TEMPLATE_INVITE_ID", 0)
 	if err != nil {
 		return nil, fmt.Errorf("invalid MAILJET_TEMPLATE_INVITE_ID: %w", err)
@@ -123,6 +148,23 @@ func Load() (*Config, error) {
 	billingTemplateID, err := parseInt64Env("MAILJET_TEMPLATE_BILLING_REMINDER_ID", 0)
 	if err != nil {
 		return nil, fmt.Errorf("invalid MAILJET_TEMPLATE_BILLING_REMINDER_ID: %w", err)
+	}
+
+	egoSMSBaseURL := getEnv("EGO_SMS_BASE_URL", "")
+	egoSMSUsername := getEnv("EGO_SMS_USERNAME", "")
+	egoSMSPassword := getEnv("EGO_SMS_PASSWORD", "")
+	egoSMSSenderID := getEnv("EGO_SMS_SENDER_ID", "")
+	if strings.TrimSpace(egoSMSBaseURL) == "" {
+		return nil, fmt.Errorf("EGO_SMS_BASE_URL is required")
+	}
+	if strings.TrimSpace(egoSMSUsername) == "" {
+		return nil, fmt.Errorf("EGO_SMS_USERNAME is required")
+	}
+	if strings.TrimSpace(egoSMSPassword) == "" {
+		return nil, fmt.Errorf("EGO_SMS_PASSWORD is required")
+	}
+	if strings.TrimSpace(egoSMSSenderID) == "" {
+		return nil, fmt.Errorf("EGO_SMS_SENDER_ID is required")
 	}
 
 	cfg := &Config{
@@ -160,6 +202,14 @@ func Load() (*Config, error) {
 		PesaPalIPNNotificationType:       strings.ToUpper(getEnv("PESAPAL_IPN_NOTIFICATION_TYPE", "GET")),
 		PesaPalTimeout:                   time.Duration(pesapalTimeoutSec) * time.Second,
 		PesaPalDebug:                     pesapalDebug,
+		EgoSMSBaseURL:                    egoSMSBaseURL,
+		EgoSMSUsername:                   egoSMSUsername,
+		EgoSMSPassword:                   egoSMSPassword,
+		EgoSMSSenderID:                   egoSMSSenderID,
+		EgoSMSTimeout:                    time.Duration(egoSMSTimeoutMS) * time.Millisecond,
+		EgoSMSDebug:                      egoSMSDebug,
+		SMSSendRPM:                       smsSendRPM,
+		SMSBulkSendRPM:                   smsBulkRPM,
 		SMSProvider:                      getEnv("SMS_PROVIDER", ""),
 		SMSAPIKey:                        getEnv("SMS_API_KEY", ""),
 		InternalJobSecret:                strings.TrimSpace(os.Getenv("INTERNAL_JOB_SECRET")),
